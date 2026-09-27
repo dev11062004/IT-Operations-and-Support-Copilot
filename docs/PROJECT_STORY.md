@@ -1,85 +1,57 @@
-# PROJECT STORY: IT Operations & Support Copilot
+# Project Story: Phase 13-A IT Support Foundation
 
-## Document Purpose
+The MCP RAG Agent remains a policy and knowledge assistant. Phase 13-A extends
+that system with a small, persistence-free IT support domain layer so later phases
+can add ticketing, incidents, runbooks, and IT operations safely.
 
-This document provides the high-level product story for the transformation of the
-MCP RAG Agent into an enterprise IT Operations & Support Copilot.
-It is intended as onboarding documentation for new engineers and as evidence
-for technical reviews, architecture reviews, and stakeholder presentations.
+The extension provides typed Pydantic contracts for issues, tickets, incidents,
+users, and devices; a stable support taxonomy; deterministic intent
+classification with an optional LLM fallback; an IT-specific COSTAR prompt; and
+expanded guardrail vocabulary. The existing retrieval, LangGraph, MCP, memory,
+guardrails, evaluation, observability, FastAPI, frontend, Docker, and CI/CD
+systems are not replaced.
 
----
+Phase 13-A intentionally added no ticket database, ticket API, incident store,
+runbook executor, operational MCP tools, RBAC, approval workflow, or admin
+dashboard. Feature rollout remains disabled by default through
+`FEATURE_FLAG_IT_SUPPORT_ENABLED=false`.
 
-## Origin
+Phase 13-B adds the MongoDB-backed ticket and incident lifecycle layer. Ticket
+state changes are deterministic and validated by the domain service; duplicate
+tickets and known active incidents are detected from structured fields before
+new work is created. The ticket HTTP API remains behind the IT support feature
+flag.
 
-The MCP RAG Agent was originally built (Phases 1–12) as an enterprise policy
-knowledge assistant: employees could ask questions about HR policies (remote work,
-annual leave, expenses, IT security, sustainability) and receive grounded answers
-with source citations.
+Phase 13-C adds a stateful IT troubleshooting runbook engine integrated with the
+existing LangGraph architecture. The engine provides 10 synthetic enterprise
+runbooks (VPN, Wi-Fi, MFA, Password Lockout, GitHub Access, Jira Access,
+Outlook, Printer, Laptop Display, Phishing Incident) with strictly validated
+step transition graphs. A LangGraph subgraph coordinates the STEP -> EVALUATE ->
+BRANCH (`next step`, `resolved`, `escalation`) state machine, backed by the
+system's existing checkpointer. Step transitions are deterministic and cannot be
+invented by the LLM. An `execute_runbook_step` LangChain StructuredTool integrates
+the executor with the agent runner under the IT support feature flag.
 
-The system demonstrated:
-- MongoDB Atlas hybrid vector + keyword retrieval (Reciprocal Rank Fusion)
-- LangGraph ReAct agent with persistent multi-turn memory
-- FastMCP / Model Context Protocol integration
-- Zero-hallucination guardrails (citation validation, grounding score, confidence threshold)
-- Quantitative evaluation (RAGAS + native retrieval metrics)
-- Production FastAPI + Nginx deployment (Docker Compose)
-- GitHub Actions CI/CD with security scanning
+Phase 13-D adds the MCP IT Operations Tool Layer, exposing 5 typed operational
+tools (`get_user_context`, `get_device_info`, `check_service_status`, `create_ticket`,
+`update_ticket`) across FastMCP server mode and Direct mode LangChain StructuredTools.
+The tools are backed by domain services and stores for users (`it_support/users/`),
+devices (`it_support/devices/`), and service statuses (`it_support/services/`),
+reusing the existing MongoDB connection layer and Phase 13-B ticket services.
+RBAC and human approval (Phase 13-E) and admin dashboards/evaluation (Phase 13-F)
+remain future phases.
 
-The core infrastructure was production-grade and extensible. The opportunity was
-to evolve the domain from "policy Q&A" to "IT Operations & Support" — a much
-richer domain with interactive workflows, tool execution, and ticket lifecycle management.
+## Evidence
 
----
+- Phase 13-A modules created: 6 (`models.py`, `intent.py`, `it_support_prompt.py`, `test_models.py`, `test_intent.py`, `__init__.py`)
+- Phase 13-A unit tests added: 27 (10 models, 17 intent)
+- Intent test accuracy: 100% (10/10 deterministic intent query test cases passed)
+- Phase 13-B modules created: 14 (tickets domain, incidents domain, API routes/schemas/services, and 3 test suites)
+- Phase 13-B unit tests added: 16 (8 tickets, 6 incidents, 2 ticket API)
+- Phase 13-C modules created: 8 (`models.py`, `runbook_definitions.py`, `registry.py`, `graph.py`, `executor.py`, `tools.py`, `__init__.py`, `test_runbooks.py`)
+- Phase 13-C unit tests added: 17 covering registration, active-versioning, heuristic/intent selection, step execution, branching, retries, escalations, cross-instance state restoration, and invalid transitions
+- Phase 13-D modules created: 17 (users domain [4], devices domain [4], services domain [4], tools/script [2], and 5 test suites)
+- Phase 13-D unit tests added: 28 covering user lookups, device info, service status, incident correlation, ticket creation/duplicate detection/updates via MCP, and direct agent workflow tool execution
+- Total IT Support unit tests: 88/88 passed
+- Total offline unit test suite: 285/285 passed (197 baseline + 27 Phase 13-A + 16 Phase 13-B + 17 Phase 13-C + 28 Phase 13-D)
 
-## Architecture Transformation
-
-The transformation strategy is **extension, not replacement**.
-
-All existing subsystems (retrieval, guardrails, memory, evaluation, observability,
-API, UI, Docker, CI/CD) are preserved and extended rather than replaced.
-
-New domain-oriented modules are introduced under `src/mcp_rag_agent/`:
-
-```
-it_support/           ← NEW: IT domain models, intent, runbooks, tickets, incidents
-security/             ← PLANNED: RBAC, authorization, approval, audit
-```
-
-The existing `agent/`, `guardrails/`, `retrieval/`, `api/`, and `mcp_server/`
-subsystems are extended minimally to support the new domain.
-
----
-
-## Phased Evolution
-
-| Phase | Domain | Status |
-|---|---|---|
-| 1–12 | Policy RAG Agent (Complete) | ✅ Done |
-| 13-A | IT Support Domain Foundation | ✅ Done |
-| 13-B | Ticket & Incident Management | 🔜 Planned |
-| 13-C | Runbook Engine | 🔜 Planned |
-| 13-D | MCP IT Operations Tools | 🔜 Planned |
-| 13-E | Security, RBAC & Human Approval | 🔜 Planned |
-| 13-F | IT-Specific Evaluation & Admin UI | 🔜 Planned |
-
----
-
-## Key Engineering Principles Applied
-
-1. **Domain Fidelity Over Generic Chatbot**: Every feature is traceable to a real
-   IT support workflow step. The system follows: Intent → Classify → Retrieve → Troubleshoot → Resolve/Escalate → Ticket.
-
-2. **No Fabrication**: The system never claims a ticket was created unless a tool
-   created it, never invents troubleshooting steps not in the knowledge base,
-   and never reports metrics not measured.
-
-3. **Defense-in-Depth**: Guardrails are extended (not replaced) to accept IT vocabulary.
-   The existing 4-tier decision taxonomy, confidence thresholds, and citation validation
-   remain enforced.
-
-4. **Testability First**: Every new module ships with offline unit tests before
-   integration. The LLM fallback path in the intent classifier is mockable by
-   design (dependency injection via `llm=` parameter).
-
-5. **Backward Compatibility**: Existing 197+ unit tests continue to pass after
-   each phase. The policy RAG mode is unchanged when `FEATURE_FLAG_IT_SUPPORT=false`.

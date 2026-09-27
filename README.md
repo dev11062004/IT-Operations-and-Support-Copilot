@@ -1,5 +1,11 @@
 # MCP RAG Agent
 
+[![CI Pipeline](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/ci.yml)
+[![Integration Tests](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/integration.yml/badge.svg)](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/integration.yml)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+
 Production-ready RAG system combining LangGraph agent with Model Context Protocol (MCP) integration. Features hybrid search using Reciprocal Rank Fusion (RRF) via MongoDB vector and full-text searches, grounded responses using COSTAR prompting, and automated RAGAS-based evaluation for building reliable, context-aware AI agents.
 
 ## Overview
@@ -22,6 +28,7 @@ The MCP RAG Agent is a sophisticated question-answering system that:
 - **Grounded Responses**: Strict context-based answering with no hallucinations
 - **COSTAR Prompting**: Structured prompt design for consistent, high-quality outputs
 - **LangGraph Agent**: Reasoning and acting cycles for intelligent tool usage
+- **Persistent Conversation Memory**: Multi-turn dialogue continuity backed by MongoDB Atlas checkpoints (`MongoDBSaver`), surviving process restarts with strict thread isolation and graceful fallback during database outages
 - **Automated Evaluation**: RAGAS-based metrics for answer quality assessment
 
 
@@ -84,8 +91,19 @@ mcp-rag-agent/
 │   │   ├── client.py               # MongoDB wrapper with vector search
 │   │   └── README.md               # MongoDB module documentation
 │   └── core/                       # Configuration and utilities
+│       ├── checkpointer.py         # MongoDB & memory checkpointer factory
 │       ├── config.py               # Environment-based configuration
 │       └── log_setup.py            # Logging configuration
+├── .dockerignore                   # Docker build ignore patterns
+├── Dockerfile                      # Multi-stage production container image
+├── Dockerfile.frontend             # Standalone Nginx frontend container image
+├── docker-compose.yml              # Microservice orchestration (api, frontend, mongodb, mcp)
+├── docker/
+│   └── nginx/                      # Unprivileged Nginx configuration & reverse proxy
+│       └── nginx.conf
+├── docs/
+│   ├── DEPLOYMENT.md               # Production deployment & operations guide
+│   └── DEBUGGING_GUIDE.md          # Runtime troubleshooting guide
 ├── tests/                          # Tests
 │   └── unit_tests                  # Unit tests
 ├── .env.example                    # Example environment configuration
@@ -97,7 +115,62 @@ mcp-rag-agent/
 └── README.md                       # This file
 ```
 
-## Quick Start
+## Production Deployment (Docker & Compose)
+
+The application can be deployed on a clean machine using Docker Compose with zero local Python or database installation requirements.
+
+### Clean Machine Quickstart
+
+1. **Configure environment**:
+```bash
+cp .env.example .env
+# Edit .env with your OPENAI_API_KEY
+```
+
+2. **Build and launch the stack**:
+```bash
+docker compose build
+docker compose up -d
+```
+
+This starts:
+- **`api`** on `http://localhost:8000` (FastAPI backend + LangGraph agent)
+- **`frontend`** on `http://localhost:3000` (Nginx static UI & reverse proxy)
+- **`mongodb`** on `localhost:27017` (Document database & vector search)
+
+3. **(Optional) Run with standalone MCP server**:
+```bash
+docker compose --profile mcp up -d
+```
+Starts **`mcp-server`** on `http://localhost:8001/sse`.
+
+### Verifying the Deployment
+
+```bash
+# 1. Check container health status
+docker compose ps
+
+# 2. Check API liveness
+curl http://localhost:8000/api/v1/health
+
+# 3. Check readiness & MongoDB connectivity
+curl http://localhost:8000/api/v1/ready
+
+# 4. Check Frontend Web UI
+curl http://localhost:3000/healthz
+# Open http://localhost:3000 in your browser
+
+# 5. Execute conversational chat request
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is the policy on annual leave in the UK?"}'
+```
+
+For full production architecture, hardening, and operation instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
+
+## Quick Start (Local Python Development)
 
 ### Prerequisites
 
@@ -419,6 +492,97 @@ Results are saved to `evaluation/results/` with timestamps.
 - Use MongoDB Atlas IP whitelisting
 - Implement rate limiting for production deployments
 - Sanitize user inputs before processing
+
+## Development Workflow & CI/CD
+
+This repository enforces strict code quality, security scanning, multi-version test coverage, and automated build validation via GitHub Actions.
+
+### Continuous Integration (CI) Architecture
+
+The main CI pipeline (`.github/workflows/ci.yml`) runs automatically on all pushes and pull requests to `main` and `master`:
+
+| Stage | Tool / Command | Objective | Secret Requirements |
+|---|---|---|---|
+| **1. Formatting** | `black --check src tests`, `isort --profile black --check src tests` | Verify adherence to PEP 8 formatting and clean import sorting | None |
+| **2. Linting** | `flake8 src tests` | Detect syntax errors, undefined names, and styling issues | None |
+| **3. Unit Tests** | `pytest tests/unit_tests -m "not integration" --cov=mcp_rag_agent` | Run 195+ isolated unit tests across Python 3.10 and 3.11 with coverage reporting | None (Mocked) |
+| **4. API Contract** | `pytest tests/unit_tests/test_api.py -v` | Validate FastAPI endpoints, Zero-CoT schemas, and error propagation | None (Mocked) |
+| **5. Build Validation** | `docker compose config`, `docker compose build`, `python -m build` | Validate container compose definitions and produce Python wheel/sdist packages | None |
+| **6. Security Scan** | `bandit -r src/ -ll`, `pip-audit --desc` | Static security analysis for vulnerabilities and automated dependency auditing | None |
+
+### Separated Integration Testing
+
+Integration tests that require live external credentials (e.g., MongoDB Atlas cluster or live OpenAI API keys) are segregated in `tests/integration_tests/` and marked with `@pytest.mark.integration`. They run via a dedicated workflow (`.github/workflows/integration.yml`) utilizing a MongoDB service container, gracefully skipping any test whose credentials are not provided.
+
+### Local Development Commands
+
+#### 1. Environment Setup
+```bash
+# Clone the repository
+git clone https://github.com/luisrodriguesphd/mcp-rag-agent.git
+cd mcp-rag-agent
+
+# Create and activate virtual environment
+python -m venv venv
+# Linux/macOS:
+source venv/bin/activate
+# Windows PowerShell:
+.\venv\Scripts\Activate.ps1
+
+# Install development dependencies
+pip install -r requirements_dev.txt
+```
+
+#### 2. Code Formatting & Linting
+```bash
+# Check code formatting with Black
+black --check src tests
+
+# Reformat automatically
+black src tests
+
+# Check and order imports with isort
+isort --profile black --check src tests
+isort --profile black src tests
+
+# Run flake8 linter
+flake8 src tests
+```
+
+#### 3. Running Unit Tests with Coverage
+Ordinary unit tests run completely offline and **do not require production secrets**:
+```bash
+# Run all unit tests with terminal coverage summary
+pytest tests/unit_tests -m "not integration" --cov=mcp_rag_agent --cov-report=term-missing
+
+# Generate XML coverage artifact
+pytest tests/unit_tests -m "not integration" --cov=mcp_rag_agent --cov-report=xml:coverage.xml
+```
+
+#### 4. Running API Tests
+```bash
+pytest tests/unit_tests/test_api.py -v
+```
+
+#### 5. Running Security Scans
+```bash
+# Run Bandit static analysis (medium & high severity)
+bandit -r src/ -ll
+
+# Audit dependencies for known CVEs
+pip-audit --desc
+```
+
+#### 6. Running Integration Tests
+```bash
+# Ensure local or Atlas MongoDB is running, then run integration suite:
+pytest tests/integration_tests -m integration -v
+```
+
+#### 7. Packaging Validation
+```bash
+python -m build --sdist --wheel
+```
 
 ## Contributing
 

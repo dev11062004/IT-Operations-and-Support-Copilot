@@ -1,292 +1,172 @@
-# RAG Agent Evaluation Module
+# Production RAG Evaluation Framework (Phase 7)
 
-This module provides automated evaluation of the RAG-based agent using RAGAS (RAG Assessment) metrics.
+A modular, reproducible, and extensible evaluation harness for the MCP RAG Agent. Designed to defend retrieval and generation quality in production, track operational cost/latency, enforce regression baselines, and surface unbiased failure analyses.
 
-## Overview
+---
 
-The evaluation module implements a **two-phase approach**:
-
-1. **Phase 1: Answer Generation** - Invokes the RAG agent for each test question and saves answers to CSV
-2. **Phase 2: Metrics Computation** - Computes RAGAS metrics by comparing generated answers to ground truth
-
-Results are saved incrementally after each step to prevent data loss.
-
-## Architecture
+## 1. Directory Structure
 
 ```
 evaluation/
-├── __init__.py              # Package initialization
-├── answer_generator.py      # Phase 1: Answer generation from RAG agent
-├── metrics_evaluator.py     # Phase 2: RAGAS metrics computation
-├── metrics.py              # RAGAS metrics wrapper
-├── main.py                 # Entry point - orchestrates both phases
-├── README.md              # This file
-└── results/               # Output directory for CSV files
-    ├── answers_*.csv              # Generated answers (Phase 1 output)
-    └── evaluation_results_*.csv   # Final results with metrics (Phase 2 output)
+├── datasets/                       # Versioned benchmark datasets & schema
+│   ├── __init__.py
+│   ├── loader.py                   # BenchmarkItem, BenchmarkDataset models & loaders
+│   └── v1_policy_benchmark.json    # Curated versioned golden benchmark (15 test cases)
+├── metrics/                        # Quantitative metric evaluators
+│   ├── __init__.py                 # Unified public API
+│   ├── retrieval.py                # Recall@K, Precision@K, MRR, Hit Rate
+│   ├── generation.py               # Faithfulness, Correctness, Relevancy, Context Prec/Recall
+│   ├── operational.py              # Retrieval/Gen/Total latency, Token counts, Cost (USD)
+│   └── ragas_evaluator.py          # Legacy RAGAS pipeline with graceful fallback
+├── runners/                        # Test runners & evaluation execution
+│   ├── __init__.py
+│   └── eval_runner.py              # ProductionEvalRunner (full, retrieval_only, offline)
+├── reports/                        # Regression comparisons & failure analysis
+│   ├── __init__.py
+│   ├── comparator.py               # RegressionComparator (Metric | Baseline | Current | Diff)
+│   └── sample_regression_report.md # Generated sample regression artifact
+├── METHODOLOGY.md                  # Comprehensive metric definitions & limitations
+├── README.md                       # This documentation
+├── metrics.py                      # Backward-compatible shim re-exporting RAGASEvaluator
+├── answer_generator.py             # Legacy runner Phase 1
+├── metrics_evaluator.py            # Legacy runner Phase 2
+└── main.py                         # Legacy CLI entrypoint
 ```
 
-## Metrics
+---
 
-The module computes the following context-free RAGAS metrics:
+## 2. Evaluation Tiers & Metrics
 
-- **Answer Relevancy**: Measures how relevant the generated answer is to the input question
-- **Answer Similarity**: Computes semantic similarity between the generated answer and reference answer
-- **Answer Correctness**: Evaluates factual correctness combining similarity and accuracy
+### A. Retrieval Metrics (`evaluation/metrics/retrieval.py`)
+Measures the ranking quality and relevance of retrieved context against expected ground truth documents/chunks:
+- **Recall@K**: Proportion of relevant documents successfully retrieved in top-$K$ candidates.
+- **Precision@K**: Fraction of top-$K$ retrieved candidates that are actually relevant.
+- **Mean Reciprocal Rank (MRR)**: Reciprocal rank ($\frac{1}{\text{rank}}$) of the first relevant retrieved document.
+- **Hit Rate**: Binary indicator ($1$ or $0$) whether at least one relevant document was retrieved in top-$K$.
 
-These metrics don't require retrieved document contexts, making them suitable for evaluating the agent's final responses.
+### B. Generation Metrics (`evaluation/metrics/generation.py`)
+Measures factual grounding, correctness, and relevancy:
+- **Faithfulness**: Verifies whether claims in the generated response are factually grounded in the retrieved context (detects hallucinations).
+- **Answer Correctness**: Evaluates semantic agreement with the expected ground truth reference (weighted 50% token F1 + 50% exact numeric matching for strict policy adherence).
+- **Answer Relevancy**: Assesses how directly and completely the response addresses the prompt.
+- **Context Precision**: Signal-to-noise ratio evaluating whether relevant chunks are ranked higher in context than irrelevant ones.
+- **Context Recall**: Ground truth coverage measuring whether the retrieved context contains all facts required to answer.
 
-## Installation
+### C. Operational Metrics (`evaluation/metrics/operational.py`)
+Tracks efficiency, resource consumption, and cost:
+- **Retrieval Latency ($s$)**: Duration of vector/hybrid retrieval and reranking.
+- **Generation Latency ($s$)**: Duration of LLM inference and guardrail checks.
+- **Total Latency ($s$)**: End-to-end request duration.
+- **Token Usage**: Prompt tokens, completion tokens, and total tokens.
+- **Estimated Cost ($USD$)**: Calculated per-query using model rate cards (`gpt-4o-mini`, `gpt-4o`, `text-embedding-3-small`).
 
-Install the required dependencies (already in main requirements.txt):
+---
+
+## 3. Versioned Benchmark Dataset
+
+The Golden Benchmark is versioned in `evaluation/datasets/v1_policy_benchmark.json` and parsed via `evaluation.datasets.BenchmarkDataset`.
+
+### Schema (`BenchmarkItem`)
+```json
+{
+  "id": "bench_001",
+  "question": "In the UK, how many days of annual leave do employees receive?",
+  "expected_answer": "In the UK, full-time employees are entitled to 25 days of paid annual leave per year, plus public and bank holidays.",
+  "relevant_documents": ["3 - Annual Leave.txt"],
+  "relevant_chunks": ["annual leave entitlement uk 25 days"],
+  "category": "leave_policy",
+  "difficulty": "easy",
+  "metadata": {"requires_numeric": true}
+}
+```
+
+### Dataset Distribution (v1)
+- **15 Total Test Cases**:
+  - `leave_policy` (3 easy, 1 medium, 1 hard multi-hop)
+  - `remote_work` (3 easy/medium)
+  - `it_security` (2 easy/medium)
+  - `travel_expenses` (2 easy)
+  - `negative_control` / `refusal` (2 negative controls testing unmentioned policies like helicopter flights and maternity top-up)
+  - `out_of_domain` (2 tests evaluating guardrails against off-topic/adversarial questions)
+
+---
+
+## 4. Running Evaluations
+
+### CLI Execution
+
+#### Full Evaluation Run
+```bash
+python -m evaluation.runners.eval_runner \
+  --dataset evaluation/datasets/v1_policy_benchmark.json \
+  --output evaluation/results/run_current.json \
+  --mode full
+```
+
+#### Retrieval-Only Evaluation (No LLM generation cost)
+```bash
+python -m evaluation.runners.eval_runner \
+  --dataset evaluation/datasets/v1_policy_benchmark.json \
+  --output evaluation/results/retrieval_benchmark.json \
+  --mode retrieval_only \
+  --top-k 5
+```
+
+#### Offline Evaluation (Compute metrics on existing results)
+```bash
+python -m evaluation.runners.eval_runner \
+  --dataset evaluation/datasets/v1_policy_benchmark.json \
+  --output evaluation/results/scored_run.json \
+  --mode offline
+```
+
+---
+
+## 5. Regression Testing & Reporting
+
+To compare a modified retriever, model, or prompt against a baseline:
 
 ```bash
-pip install -r requirements.txt
+python -m evaluation.reports.comparator \
+  --baseline evaluation/results/baseline_run.json \
+  --current evaluation/results/current_run.json \
+  --output evaluation/reports/regression_report.md
 ```
 
-Key packages for evaluation:
-- `ragas>=0.1.0` - RAG evaluation framework
-- `openpyxl>=3.1.0` - Excel file reading
-- `pandas>=2.0.0` - Data manipulation
-- `datasets>=2.14.0` - Required by RAGAS
+### Sample Output Format
 
-## Configuration
-
-The evaluation uses the `evaluation_model` setting from `src/mcp_rag_agent/core/config.py`. By default, this is set to `gpt-4o-mini` via the `EVALUATION_MODEL_NAME` environment variable.
-
-To change the evaluation model, update your `.env` file:
-
-```bash
-EVALUATION_MODEL_NAME=gpt-4o-mini
+```markdown
+| Metric | Baseline | Current | Difference | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Retrieval Recall@5** | 0.9000 | 0.9500 | +0.0500 | IMPROVED |
+| **Retrieval Precision@5** | 0.4500 | 0.4800 | +0.0300 | IMPROVED |
+| **Mean Reciprocal Rank (MRR)** | 0.8500 | 0.9200 | +0.0700 | IMPROVED |
+| **Hit Rate** | 0.9500 | 1.0000 | +0.0500 | IMPROVED |
+| **Faithfulness** | 0.9100 | 0.9400 | +0.0300 | IMPROVED |
+| **Answer Correctness** | 0.8200 | 0.8800 | +0.0600 | IMPROVED |
+| **Answer Relevancy** | 0.8900 | 0.9300 | +0.0400 | IMPROVED |
+| **Retrieval Latency (s)** | 0.3500 | 0.3100 | -0.0400 | IMPROVED |
+| **Generation Latency (s)** | 1.2000 | 1.1500 | -0.0500 | IMPROVED |
+| **Total Latency (s)** | 1.5500 | 1.4600 | -0.0900 | IMPROVED |
+| **Total Estimated Cost ($)** | $0.0034 | $0.0031 | -0.0003 | IMPROVED |
 ```
 
-## Usage
+### Zero-Cherry-Picking Failure Analysis
+The comparator automatically analyzes and categorizes every sub-optimal result:
+- `RETRIEVAL_MISS`: No relevant documents retrieved.
+- `LOW_RECALL`: Relevant document found, but missing key chunks.
+- `HALLUCINATION`: Generated claims unsupported by retrieved context.
+- `UNGROUNDED_REFUSAL`: Agent refused to answer even though context was available.
+- `NUMERIC_MISMATCH`: Numeric values in answer differed from reference policy.
+- `GUARDRAIL_BYPASS`: Out-of-scope query was answered rather than safely refused.
+- `LATENCY_BREACH`: Request exceeded operational latency threshold.
 
-Run the evaluation from the project root:
+---
 
+## 6. Legacy RAGAS Runner Compatibility
+
+The legacy two-phase pipeline (`main.py`, `answer_generator.py`, `metrics_evaluator.py`) is fully preserved:
 ```bash
 python evaluation/main.py
 ```
-
-### Two-Phase Execution
-
-**First Run** (no existing answers):
-1. Generates answers for all test questions
-2. Saves to `answers_TIMESTAMP.csv`
-3. Computes metrics
-4. Saves to `evaluation_results_TIMESTAMP.csv`
-
-**Subsequent Runs** (existing answers found):
-```
-EXISTING ANSWERS FILE FOUND
-Latest answers file: answers_20241130_081500.csv
-
-Use this file and skip answer generation? (y/n):
-```
-
-- Type `y` to skip Phase 1 and only compute metrics (useful for trying different evaluation models)
-- Type `n` to generate fresh answers
-
-## Input Format
-
-Test cases are read from `data/evaluation_documents/expected_behaviour.xlsx`:
-
-| # | question | reference | source |
-|---|----------|-----------|--------|
-| 1 | In the UK, how many days of annual leave do employees receive? | 25 days per year. | 3 - Annual Leave.txt |
-
-**Columns:**
-- `#`: Test case number
-- `question`: Question to ask the agent
-- `reference`: Ground truth/expected answer
-- `source`: Document containing the answer
-
-## Output Format
-
-### Phase 1 Output: `answers_TIMESTAMP.csv`
-
-Contains original data plus generated answers:
-
-```csv
-#,question,reference,source,generated_answer,agent_error,timestamp
-1,"In the UK, how many days...",25 days per year.,3 - Annual Leave.txt,"Employees in the UK receive 25 days...",,2024-11-30T08:15:30.123456
-```
-
-### Phase 2 Output: `evaluation_results_TIMESTAMP.csv`
-
-Contains all Phase 1 columns plus computed metrics:
-
-```csv
-#,question,reference,source,generated_answer,answer_relevancy,answer_similarity,answer_correctness,agent_error,metrics_error,timestamp
-1,"In the UK, how many days...",25 days per year.,3 - Annual Leave.txt,"Employees receive 25 days...",0.9876,0.9543,0.9234,,,2024-11-30T08:15:45.789012
-```
-
-**New columns:**
-- `answer_relevancy`: Relevancy score (0-1)
-- `answer_similarity`: Similarity score (0-1)
-- `answer_correctness`: Correctness score (0-1)
-- `agent_error`: Error message if answer generation failed
-- `metrics_error`: Error message if metrics computation failed
-- `timestamp`: ISO format timestamp
-
-## Key Features
-
-✅ **MCP-Free Implementation** - Uses the refactored agent without MCP dependencies  
-✅ **Two-Phase Architecture** - Separates answer generation from metrics computation  
-✅ **Incremental Saving** - Saves progress after each question/metric  
-✅ **Skip Answer Generation** - Reuse existing answers for different evaluations  
-✅ **Error Handling** - Gracefully handles and logs errors  
-✅ **Summary Statistics** - Displays average metrics and error counts  
-
-## Error Handling
-
-The evaluation module handles errors gracefully:
-
-- **Agent errors**: Captured in `agent_error` column, metrics skipped for that row
-- **Metrics errors**: Captured in `metrics_error` column
-- **Incremental saving**: Progress is preserved even if the process is interrupted
-
-Evaluation continues for remaining test cases even if some fail.
-
-## Example Output
-
-```
-================================================================================
-PHASE 1: GENERATING ANSWERS
-================================================================================
-Loading test cases from data\evaluation_documents\expected_behaviour.xlsx...
-Loaded 10 test cases.
-
-[1/10] Generating answer for: In the UK, how many days of annual leave do employees receive?...
-  Generated answer: Employees in the UK receive 25 days of annual leave per year...
-  Saved to evaluation\results\answers_20241130_081500.csv
-
-...
-
-================================================================================
-Answer generation complete!
-Total questions: 10
-Answers saved to: evaluation\results\answers_20241130_081500.csv
-Successful: 10/10
-================================================================================
-
-================================================================================
-PHASE 2: COMPUTING METRICS
-================================================================================
-Loading answers from evaluation\results\answers_20241130_081500.csv...
-Loaded 10 answers.
-
-[1/10] Computing metrics for: In the UK, how many days of annual leave...
-  Computing RAGAS metrics...
-  Metrics: {'answer_relevancy': 0.9876, 'answer_similarity': 0.9543, 'answer_correctness': 0.9234}
-  Saved results to evaluation\results\evaluation_results_20241130_081500.csv
-
-...
-
-Metrics computation complete. Saved to: evaluation\results\evaluation_results_20241130_081500.csv
-
-Agent invocation errors: 0
-Metrics computation errors: 0
-
-Successful evaluations: 10
-
-Metric Statistics:
-----------------------------------------
-answer_relevancy: 0.9234
-answer_similarity: 0.8876
-answer_correctness: 0.8654
-================================================================================
-```
-
-## Module Components
-
-### answer_generator.py
-
-**Class:** `AnswerGenerator`
-
-- Loads test cases from Excel
-- Uses the pre-initialized MCP-free agent
-- Generates answers for each question with timeout protection
-- Saves answers incrementally to CSV
-
-**Key method:** `generate_all_answers()` - Orchestrates Phase 1
-
-### metrics_evaluator.py
-
-**Class:** `MetricsEvaluator`
-
-- Loads generated answers from CSV
-- Computes RAGAS metrics for each answer
-- Skips metrics for answers with errors
-- Saves results incrementally to CSV
-
-**Key method:** `compute_all_metrics()` - Orchestrates Phase 2
-
-### metrics.py
-
-**Class:** `RAGASEvaluator`
-
-- Wraps RAGAS library functionality
-- Provides `evaluate_single()` method for computing metrics
-- Handles RAGAS-specific error scenarios
-
-### main.py
-
-Entry point that:
-1. Checks for existing answer files
-2. Prompts user to reuse or regenerate
-3. Runs Phase 1 (if needed)
-4. Runs Phase 2 (always)
-5. Displays final summary
-
-## Performance Considerations
-
-- **Answer Generation**: 5-30 seconds per question depending on complexity
-- **Metrics Computation**: 2-5 seconds per question (requires LLM calls)
-- **Expected Runtime**: 2-5 minutes for 10 test cases (full run)
-- **Reusing Answers**: ~30 seconds for 10 test cases (metrics only)
-
-## Troubleshooting
-
-### Common Issues
-
-**Import errors**: 
-```bash
-# Ensure you're in the project root
-cd d:/Projects/mcp-rag-agent
-python evaluation/main.py
-```
-
-**Agent initialization fails**: 
-- Check MongoDB is running
-- Verify `.env` configuration
-- Ensure documents are indexed
-
-**RAGAS API errors**: 
-- Verify OpenAI API key is valid
-- Check API quota/rate limits
-
-**Excel file not found**: 
-- Ensure `data/evaluation_documents/expected_behaviour.xlsx` exists
-
-## Future Enhancements
-
-Potential improvements:
-- Add context-aware metrics when agent exposes retrieved documents
-- Support batch evaluation for improved throughput
-- Add visualization with charts and graphs
-- Compare multiple agent configurations
-- CI/CD integration for automated regression testing
-- Support for additional metrics (faithfulness, context recall, etc.)
-
-## Dependencies
-
-The evaluation module depends on:
-- The MCP-free RAG agent from `src/mcp_rag_agent/agent/`
-- Configuration from `src/mcp_rag_agent/core/config.py`
-- Test data from `data/evaluation_documents/expected_behaviour.xlsx`
-
-## Version History
-
-- **v2.0**: Refactored to use MCP-free agent, clean two-phase architecture
-- **v1.0**: Initial implementation with MCP-based agent
+If `ragas` is installed, it runs standard RAGAS evaluations. If `ragas` is unavailable (e.g. C-extension build issues on Python 3.14), the framework falls back seamlessly to the native evaluators in `evaluation.metrics.generation`.

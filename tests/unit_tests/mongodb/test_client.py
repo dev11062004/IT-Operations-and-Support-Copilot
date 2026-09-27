@@ -1,11 +1,12 @@
 """Unit tests for MongoDB client."""
 
+from unittest.mock import MagicMock, Mock, call, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
+from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.database import Database
-from pymongo.results import InsertOneResult, InsertManyResult, DeleteResult
-from bson import ObjectId
+from pymongo.results import DeleteResult, InsertManyResult, InsertOneResult
 
 from mcp_rag_agent.mongodb.client import MongoDBClient
 
@@ -16,7 +17,7 @@ class TestMongoDBClient:
     @pytest.fixture
     def mock_mongo_client(self):
         """Create a mocked MongoClient."""
-        with patch('mcp_rag_agent.mongodb.client.MongoClient') as mock:
+        with patch("mcp_rag_agent.mongodb.client.MongoClient") as mock:
             yield mock
 
     @pytest.fixture
@@ -172,7 +173,7 @@ class TestMongoDBClient:
         mock_result = Mock(spec=InsertManyResult)
         mock_result.inserted_ids = [
             ObjectId("507f1f77bcf86cd799439011"),
-            ObjectId("507f1f77bcf86cd799439012")
+            ObjectId("507f1f77bcf86cd799439012"),
         ]
 
         mock_mongo_client.return_value.__getitem__.return_value = mock_db
@@ -234,7 +235,7 @@ class TestMongoDBClient:
             index_name="vector_index",
             vector_field="embeddings",
             dimensions=768,
-            similarity="cosine"
+            similarity="cosine",
         )
 
         expected_index = {
@@ -246,10 +247,10 @@ class TestMongoDBClient:
                         "type": "vector",
                         "path": "embeddings",
                         "numDimensions": 768,
-                        "similarity": "cosine"
+                        "similarity": "cosine",
                     }
                 ]
-            }
+            },
         }
 
         mock_collection.create_search_index.assert_called_once_with(expected_index)
@@ -260,7 +261,7 @@ class TestMongoDBClient:
         mock_collection = MagicMock(spec=Collection)
         mock_results = [
             {"_id": "1", "text": "doc1", "score": 0.95},
-            {"_id": "2", "text": "doc2", "score": 0.89}
+            {"_id": "2", "text": "doc2", "score": 0.89},
         ]
 
         mock_mongo_client.return_value.__getitem__.return_value = mock_db
@@ -274,7 +275,7 @@ class TestMongoDBClient:
             vector_field="embeddings",
             query_vector=query_vector,
             limit=5,
-            num_candidates=50
+            num_candidates=50,
         )
 
         assert len(results) == 2
@@ -305,7 +306,7 @@ class TestMongoDBClient:
             vector_field="embeddings",
             query_vector=query_vector,
             limit=5,
-            filter_query=filter_query
+            filter_query=filter_query,
         )
 
         # Verify filter is included in pipeline

@@ -116,6 +116,8 @@ _POLICY_KEYWORDS = {
     # Software & Applications
     "software",
     "application",
+    "github",
+    "jira",
     "app",
     "crash",
     "install",
@@ -130,6 +132,7 @@ _POLICY_KEYWORDS = {
     "network",
     "internet",
     "wifi",
+    "wi-fi",
     "ethernet",
     "connectivity",
     "dns",

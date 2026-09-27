@@ -1,0 +1,176 @@
+{
+  "name": "Company XYZ Policy Evaluation Benchmark",
+  "version": "v1.0",
+  "description": "Standardized evaluation benchmark measuring retrieval precision/recall and answer generation quality across policy domains, edge cases, and refusals.",
+  "items": [
+    {
+      "id": "BENCH-001",
+      "question": "In the UK, how many days of annual leave do employees receive?",
+      "expected_answer": "Full-time UK employees receive 25 days of paid annual leave per year.",
+      "relevant_documents": ["3 - Annual Leave.txt"],
+      "relevant_chunks": ["UK Employees: Full-time employees receive 25 days"],
+      "category": "Annual Leave",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-002",
+      "question": "Can unused annual leave be carried over for EU employees?",
+      "expected_answer": "Yes, EU employees may carry over up to 5 days of unused annual leave.",
+      "relevant_documents": ["3 - Annual Leave.txt"],
+      "relevant_chunks": ["EU Employees: Up to 5 days unused leave can be carried over"],
+      "category": "Annual Leave",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-003",
+      "question": "How often should employees change their passwords?",
+      "expected_answer": "Passwords must be at least 12 characters long and changed every 90 days.",
+      "relevant_documents": ["4 - IT Security.txt"],
+      "relevant_chunks": ["Passwords must be at least 12 characters long and changed every 90 days"],
+      "category": "IT Security",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-004",
+      "question": "Can I claim for lunch expenses when working in the office?",
+      "expected_answer": "No, meal costs are reimbursable only when working away from the home office.",
+      "relevant_documents": ["2 - Expenses.txt"],
+      "relevant_chunks": ["Meal costs are reimbursable only when working away from the home office"],
+      "category": "Expenses",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-005",
+      "question": "In the US, how far in advance should I request annual leave?",
+      "expected_answer": "In the US, leave requests should be submitted at least one week in advance.",
+      "relevant_documents": ["3 - Annual Leave.txt"],
+      "relevant_chunks": ["US Employees: Leave requests should be submitted at least one week in advance"],
+      "category": "Annual Leave",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-006",
+      "question": "What should I do if I suspect a security incident?",
+      "expected_answer": "All security incidents must be reported to IT immediately.",
+      "relevant_documents": ["4 - IT Security.txt"],
+      "relevant_chunks": ["All security incidents must be reported to IT immediately"],
+      "category": "IT Security",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-007",
+      "question": "How many remote days can I work each week?",
+      "expected_answer": "Employees may work remotely up to three days per week with line manager agreement.",
+      "relevant_documents": ["1 - Remote Working.txt"],
+      "relevant_chunks": ["Employees may work remotely up to three days per week"],
+      "category": "Remote Working",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-008",
+      "question": "Who must approve remote work?",
+      "expected_answer": "All remote work must be agreed in advance with line managers.",
+      "relevant_documents": ["1 - Remote Working.txt"],
+      "relevant_chunks": ["All remote work must be agreed in advance with line managers"],
+      "category": "Remote Working",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-009",
+      "question": "What is the company's carbon reduction target?",
+      "expected_answer": "The company aims to reduce carbon emissions by 20% by 2030.",
+      "relevant_documents": ["5 - Sustainability.txt"],
+      "relevant_chunks": ["The company aims to reduce carbon emissions by 20% by 2030"],
+      "category": "Sustainability",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-010",
+      "question": "What is the rule on sharing company laptops?",
+      "expected_answer": "Company laptops must not be shared with anyone outside the organisation.",
+      "relevant_documents": ["4 - IT Security.txt"],
+      "relevant_chunks": ["Company laptops must not be shared with anyone outside the organisation"],
+      "category": "IT Security",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-011",
+      "question": "Compare the annual leave allowances for UK, EU, and US employees.",
+      "expected_answer": "UK full-time employees receive 25 days of paid annual leave, EU employees receive 30 days, and US employees receive 15 days.",
+      "relevant_documents": ["3 - Annual Leave.txt"],
+      "relevant_chunks": [
+        "UK Employees: 25 days",
+        "EU Employees: 30 days",
+        "US Employees: 15 days"
+      ],
+      "category": "Annual Leave",
+      "difficulty": "hard",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-012",
+      "question": "What is the deadline for submitting business travel expense claims?",
+      "expected_answer": "All expense claims must be submitted within 30 days of travel.",
+      "relevant_documents": ["2 - Expenses.txt"],
+      "relevant_chunks": ["All expense claims must be submitted within 30 days of travel"],
+      "category": "Expenses",
+      "difficulty": "medium",
+      "is_refusal_expected": false,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-013",
+      "question": "What is the policy for parental and maternity leave?",
+      "expected_answer": "I couldn't find this information in the available policy content.",
+      "relevant_documents": [],
+      "relevant_chunks": [],
+      "category": "Annual Leave",
+      "difficulty": "medium",
+      "is_refusal_expected": true,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-014",
+      "question": "Can I expense first-class flights to Hawaii for personal vacation?",
+      "expected_answer": "I couldn't find this information in the available policy content.",
+      "relevant_documents": [],
+      "relevant_chunks": [],
+      "category": "Expenses",
+      "difficulty": "medium",
+      "is_refusal_expected": true,
+      "is_out_of_domain": false
+    },
+    {
+      "id": "BENCH-015",
+      "question": "Write a Python script to sort a list using merge sort.",
+      "expected_answer": "I am dedicated solely to answering questions about Company XYZ internal policies. This question is outside my knowledge scope.",
+      "relevant_documents": [],
+      "relevant_chunks": [],
+      "category": "Out-of-Domain",
+      "difficulty": "easy",
+      "is_refusal_expected": false,
+      "is_out_of_domain": true
+    }
+  ]
+}

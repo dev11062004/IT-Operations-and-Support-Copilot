@@ -97,148 +97,137 @@ This demo script will:
 - Perform a test search
 - Clean up dummy documents
 
-### Document Indexing Script
+### Production Document Ingestion Subsystem
 
-The `index_documents.py` script provides a complete pipeline for indexing documents from disk into MongoDB.
+The `index_documents.py` entry point orchestrates the production `DocumentIngestionPipeline` (`src/mcp_rag_agent/ingestion/`).
 
-## Document Indexing
+## Document Ingestion & Indexing
 
 ### Quick Start
 
-**Index documents:**
+**Standard incremental ingestion (skips duplicates):**
 ```bash
-python src/mcp_rag_agent/embeddings/index_documents.py
+python -m mcp_rag_agent.embeddings.index_documents
 ```
 
-**Clear existing data and re-index:**
+**Force re-indexing of all documents:**
 ```bash
-python src/mcp_rag_agent/embeddings/index_documents.py --clear
+python -m mcp_rag_agent.embeddings.index_documents --reindex
 ```
 
-### Command Line Arguments
+**Clear existing database indexes and rebuild from scratch:**
+```bash
+python -m mcp_rag_agent.embeddings.index_documents --clear
+```
 
-| Argument | Description |
-|----------|-------------|
-| `--clear` | Delete all existing documents and vectors before indexing |
+**Ingest from a custom directory with custom chunk parameters:**
+```bash
+python -m mcp_rag_agent.embeddings.index_documents --folder ./data/my_docs --chunk-size 800 --chunk-overlap 80
+```
 
-### How It Works
+### CLI Options
 
-The indexing script performs the following workflow:
+| Argument | Type | Default | Description |
+|---|---|---|---|
+| `--clear` | Flag | `False` | Delete all existing documents and vectors before indexing |
+| `--reindex` | Flag | `False` | Force re-indexing of all documents even if content hashes match |
+| `--folder` | String | `config.ingested_doc_dir` | Custom folder containing documents to process |
+| `--chunk-size` | Integer | `config.chunk_size` (500) | Maximum characters per chunk |
+| `--chunk-overlap` | Integer | `config.chunk_overlap` (50) | Overlapping characters between consecutive chunks |
 
-1. **Initialize Components**
-   - Connect to MongoDB
-   - Initialize embedding generator
-   - Set up semantic search
+### Pipeline Architecture
 
-2. **Clear Data (Optional)**
-   - If `--clear` flag is used:
-     - Delete all documents from `documents` collection
-     - Delete all vectors from `vectors` collection
+```
+Source Document (.txt, .md, .pdf, .docx)
+    │
+    ▼
+SHA-256 Hasher & Duplicate Detector
+    ├─ Unchanged Hash & not reindex ──► [SKIP]
+    └─ New Hash or reindex=True ──────► Purge Stale Chunks
+                                              │
+                                              ▼
+                                         Format Parser (TXT/MD/PDF/DOCX)
+                                              │
+                                              ▼
+                                         Document Cleaner (NFKC, control chars)
+                                              │
+                                              ▼
+                                         Structure-Aware Chunker
+                                              │
+                                              ▼
+                                         Metadata Enrichment
+                                              │
+                                              ▼
+                                         Batch Embedding Generator
+                                              ├─► documents Collection (Parent Metadata)
+                                              └─► vectors Collection (Chunks + Embeddings)
+```
 
-3. **Ensure Collections Exist**
-   - Create `documents` collection if needed
-   - Create `vectors` collection if needed
+### Supported File Formats
 
-4. **Set Up Vector Search Index**
-   - Create vector search index on `vectors` collection
-   - Configure dimensions and similarity metric
+- **Plain Text (`.txt`)**: UTF-8 and fallback encoding support, paragraph-aware.
+- **Markdown (`.md`, `.markdown`)**: Frontmatter/title extraction, partitioned by `#`, `##` headings into sections.
+- **PDF (`.pdf`)**: Page-by-page extraction via `pypdf`, preserving 1-indexed `page_number`.
+- **Microsoft Word (`.docx`)**: Heading and paragraph extraction via `python-docx`, preserving section hierarchy and table text.
 
-5. **Index Documents**
-   - Scan `data/ingested_documents` folder recursively
-   - For each `.txt` file:
-     - Read content
-     - Save metadata to `documents` collection
-     - Generate embedding
-     - Save vector to `vectors` collection with cross-reference
+### Document Schema
 
-### Document Structure
-
-**Documents Collection:**
+**`documents` Collection (Parent Document Records):**
 ```json
 {
-  "_id": "ObjectId(...)",
-  "name": "1 - Remote Working.txt",
-  "folder": "policies",
-  "relative_path": "policies/1 - Remote Working.txt",
-  "absolute_path": "D:/Projects/mcp-rag-agent/data/ingested_documents/policies/1 - Remote Working.txt",
-  "content": "Full document content...",
-  "size": 172
+  "document_id": "doc_a1b2c3d4e5f6",
+  "filename": "remote_working.pdf",
+  "file_type": "pdf",
+  "source_path": "/path/to/remote_working.pdf",
+  "title": "Remote Working Policy",
+  "content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "total_chunks": 4,
+  "total_characters": 1820,
+  "ingestion_timestamp": "2026-09-23T08:30:00.000000+00:00",
+  "created_at": "2026-09-23T08:30:00.000000+00:00"
 }
 ```
 
-**Vectors Collection:**
+**`vectors` Collection (Chunks with Embeddings & Enriched Metadata):**
 ```json
 {
-  "_id": "ObjectId(...)",
-  "content": "Full document content...",
-  "embedding": [0.123, -0.456, ...],  // 1536-dimensional vector
+  "chunk_id": "doc_a1b2c3d4e5f6_c0",
+  "content": "Employees may work remotely up to three days per week...",
+  "embedding": [0.0123, -0.0456, ...],
   "metadata": {
-    "document_id": "ObjectId(...)",
-    "document_name": "1 - Remote Working.txt",
-    "folder_name": "policies",
-    "relative_path": "policies/1 - Remote Working.txt",
-    "content_length": 172
+    "chunk_id": "doc_a1b2c3d4e5f6_c0",
+    "document_id": "doc_a1b2c3d4e5f6",
+    "filename": "remote_working.pdf",
+    "file_type": "pdf",
+    "source_path": "/path/to/remote_working.pdf",
+    "title": "Remote Working Policy",
+    "section": "Eligibility Criteria",
+    "page_number": 1,
+    "chunk_index": 0,
+    "total_chunks": 4,
+    "content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ingestion_timestamp": "2026-09-23T08:30:00.000000+00:00"
   }
 }
 ```
 
-### Output Example
-
-```
-============================================================
-Document Indexing Script
-============================================================
-
-📊 Initializing MongoDB client...
-🤖 Initializing embedding generator...
-🔍 Initializing semantic search...
-
-🗑️  Clearing existing data...
-   ✅ Deleted 5 document(s) from 'documents'
-   ✅ Deleted 5 vector(s) from 'vectors'
-
-🗂️  Checking collections...
-   ✅ Collection 'documents' exists
-   ✅ Collection 'vectors' exists
-
-🔧 Setting up vector search index...
-   ✅ Vector search index 'vector_index' ready
-   ℹ️  Note: New indexes may take a few minutes to become fully active
-
-Found 5 document(s) to index
-============================================================
-
-📄 Processing: 1 - Remote Working.txt
-   Folder: policies
-   Content length: 172 characters
-   ✅ Saved to documents collection (ID: 692af121...)
-   ✅ Saved to vectors collection (ID: 692af122...)
-
-... (more documents)
-
-============================================================
-✨ Indexing complete! Successfully indexed 5/5 document(s)
-
-🔌 Disconnecting from MongoDB...
-✅ Done!
-```
-
 ## Configuration
 
-The module uses settings from `config.py`:
+The module uses environment-driven settings from `config.py`:
 
 ```python
-# MongoDB settings
-db_url: str                        # MongoDB connection URI
-db_name: str                       # Database name
-db_documents_collection: str       # Collection for document metadata
-db_vector_collection: str          # Collection for vectors
-db_vector_index_name: str         # Name of vector search index
+# Ingestion & Chunking settings
+chunk_size: int = 500              # Maximum characters per chunk
+chunk_overlap: int = 50            # Overlap between adjacent chunks
+reindex: bool = False              # Force re-indexing of documents
+ingested_doc_dir: str              # Directory containing raw policy documents
 
-# Embedding settings
-model_api_key: str                 # OpenAI API key
-embedding_model: str               # Model name (e.g., "text-embedding-3-small")
-embedding_dimension: int           # Vector dimensions (default: 1536)
+# Database & Embedding settings
+db_documents_collection: str       # "documents"
+db_vector_collection: str          # "vectors"
+db_vector_index_name: str          # "vector_index"
+embedding_model: str               # "text-embedding-3-small"
+embedding_dimension: int           # 256
 ```
 
 ## Requirements

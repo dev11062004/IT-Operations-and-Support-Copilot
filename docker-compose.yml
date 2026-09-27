@@ -1,0 +1,141 @@
+services:
+  # ============================================================================
+  # 1. MongoDB Document & Vector Store (Local Container)
+  # ============================================================================
+  mongodb:
+    image: mongo:7.0
+    container_name: mcp-rag-mongodb
+    restart: unless-stopped
+    ports:
+      - "${MONGODB_PORT:-27017}:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=${MONGODB_ATLAS_DB_NAME:-mcp_rag_agent_db}
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  # ============================================================================
+  # 2. Production API Service (FastAPI + LangGraph RAG Agent)
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: mcp-rag-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=${API_PORT:-8000}
+      - MONGODB_ATLAS_CLUSTER_URI=${MONGODB_ATLAS_CLUSTER_URI:-mongodb://mongodb:27017}
+      - MONGODB_ATLAS_DB_NAME=${MONGODB_ATLAS_DB_NAME:-mcp_rag_agent_db}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - TEXT_MODEL_NAME=${TEXT_MODEL_NAME:-gpt-4.1}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-text-embedding-3-small}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-mcp-rag-agent}
+      - FEATURE_FLAG_MCPSERVER_ENABLED=${FEATURE_FLAG_MCPSERVER_ENABLED:-false}
+      - FEATURE_FLAG_SESSION_MEMORY_ENABLED=${FEATURE_FLAG_SESSION_MEMORY_ENABLED:-true}
+      - FEATURE_FLAG_GUARDRAILS_ENABLED=${FEATURE_FLAG_GUARDRAILS_ENABLED:-true}
+      - MCP_SERVER_NAME=${MCP_SERVER_NAME:-mongodb-semantic-search}
+      - MCP_SERVER_HOST=${MCP_SERVER_HOST:-mcp-server}
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-stdio}
+      - MCP_SERVER_URL=${MCP_SERVER_URL:-http://mcp-server:8001/sse}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-text}
+      - DEBUG=${DEBUG:-false}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${API_PORT:-8000}/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    stop_grace_period: 20s
+    networks:
+      - mcp-network
+
+  # ============================================================================
+  # 3. Production Frontend Service (Nginx Reverse Proxy & Static Web UI)
+  # ============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+    container_name: mcp-rag-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    stop_grace_period: 10s
+    networks:
+      - mcp-network
+
+  # ============================================================================
+  # 4. Optional Standalone MCP Server Service (FastMCP SSE Transport)
+  # ============================================================================
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: mcp-rag-mcp-server
+    restart: unless-stopped
+    command: ["python", "-m", "mcp_rag_agent.mcp_server.server"]
+    ports:
+      - "${MCP_SERVER_PORT:-8001}:${MCP_SERVER_PORT:-8001}"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - MONGODB_ATLAS_CLUSTER_URI=${MONGODB_ATLAS_CLUSTER_URI:-mongodb://mongodb:27017}
+      - MONGODB_ATLAS_DB_NAME=${MONGODB_ATLAS_DB_NAME:-mcp_rag_agent_db}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+      - MCP_TRANSPORT=sse
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -I http://localhost:${MCP_SERVER_PORT:-8001}/sse || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    stop_grace_period: 15s
+    profiles:
+      - mcp
+      - all
+    networks:
+      - mcp-network
+
+volumes:
+  mongodb_data:
+    name: mcp_rag_mongodb_data
+
+networks:
+  mcp-network:
+    name: mcp_rag_network
+    driver: bridge

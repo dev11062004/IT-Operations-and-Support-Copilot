@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Knowledge Assistant | MCP RAG</title>
+    <meta name="description" content="Production Enterprise Conversational RAG Assistant with persistent memory, source citations, and grounding guardrails.">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/ui/styles.css">
+</head>
+<body class="dark-theme">
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">Knowledge AI</span>
+                        <span class="brand-badge">ENTERPRISE RAG</span>
+                    </div>
+                </div>
+                <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close Sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="btn-new-chat" id="newChatBtn" title="Start a fresh conversation thread">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>New Conversation</span>
+                    <span class="kbd-hint">⌘K</span>
+                </button>
+            </div>
+
+            <div class="sidebar-section-header">
+                <span>CONVERSATIONS</span>
+                <span class="thread-count" id="threadCountBadge">0</span>
+            </div>
+
+            <div class="conversations-list" id="conversationsList">
+                <div class="threads-empty">
+                    <p>No active sessions yet.</p>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="status-summary" id="systemStatusTrigger" title="Click to view deep system diagnostics">
+                    <span class="status-dot status-operational" id="sidebarStatusDot"></span>
+                    <div class="status-info">
+                        <span class="status-label" id="sidebarStatusText">Checking Status...</span>
+                        <span class="status-sub">MongoDB & LLM</span>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </div>
+                <div class="footer-meta">
+                    <span>MCP RAG v0.1.0</span>
+                    <a href="/docs" target="_blank" rel="noopener noreferrer" class="link-docs">OpenAPI Docs</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Viewport -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="app-header">
+                <div class="header-left">
+                    <button class="btn-icon mobile-menu-btn" id="mobileMenuBtn" aria-label="Open Navigation">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div class="active-thread-details">
+                        <h1 class="header-title" id="activeThreadTitle">Policy Knowledge Base</h1>
+                        <span class="thread-id-tag" id="activeThreadIdTag">Loading thread...</span>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <button class="status-pill" id="headerStatusPill" title="Click for diagnostic readiness details">
+                        <span class="pulse-indicator status-operational" id="headerStatusDot"></span>
+                        <span class="status-pill-text" id="headerStatusText">Operational</span>
+                    </button>
+
+                    <button class="btn-header-action" id="headerClearBtn" title="Clear current dialogue history">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        <span>Clear</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Stream Area -->
+            <div class="messages-viewport" id="messagesViewport">
+                <!-- Empty State Hero (shown when 0 messages) -->
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-hero-icon">
+                        <div class="hero-icon-glow"></div>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="M9 12l2 2 4-4"/>
+                        </svg>
+                    </div>
+
+                    <h2 class="empty-title">Enterprise Knowledge Assistant</h2>
+                    <p class="empty-subtitle">
+                        Ask questions regarding official Company XYZ operational policies. Every answer is synthesized strictly from indexed documents with verifiable citations and anti-hallucination guardrails.
+                    </p>
+
+                    <div class="system-features-row">
+                        <div class="feature-chip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Grounded Citations</span>
+                        </div>
+                        <div class="feature-chip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 14 14"></polyline>
+                            </svg>
+                            <span>Hybrid Search (RRF)</span>
+                        </div>
+                        <div class="feature-chip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                            <span>Persistent Session Memory</span>
+                        </div>
+                        <div class="feature-chip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                            <span>Zero Chain-of-Thought Safe</span>
+                        </div>
+                    </div>
+
+                    <div class="starter-prompts-grid">
+                        <button class="starter-card" data-prompt="In the UK, how many days of annual leave do full-time employees receive?">
+                            <div class="starter-icon leave-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <div class="starter-content">
+                                <span class="starter-title">Annual Leave Policy</span>
+                                <span class="starter-desc">What is the UK holiday entitlement and carryover limit?</span>
+                            </div>
+                        </button>
+
+                        <button class="starter-card" data-prompt="What is the daily meal allowance when traveling away from the office on business?">
+                            <div class="starter-icon expense-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
+                            </div>
+                            <div class="starter-content">
+                                <span class="starter-title">Expense Reimbursements</span>
+                                <span class="starter-desc">Meal allowances and receipt submission deadlines.</span>
+                            </div>
+                        </button>
+
+                        <button class="starter-card" data-prompt="Can employees work remotely for up to 3 days a week without manager approval?">
+                            <div class="starter-icon remote-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                                </svg>
+                            </div>
+                            <div class="starter-content">
+                                <span class="starter-title">Remote Working Rules</span>
+                                <span class="starter-desc">Hybrid work eligibility and manager pre-approvals.</span>
+                            </div>
+                        </button>
+
+                        <button class="starter-card" data-prompt="What are the minimum length and rotation requirements for company passwords?">
+                            <div class="starter-icon security-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </div>
+                            <div class="starter-content">
+                                <span class="starter-title">IT & Security Standards</span>
+                                <span class="starter-desc">Password complexity, laptop locks, and incident reporting.</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dialogue Container -->
+                <div class="dialogue-list" id="dialogueList"></div>
+
+                <!-- Loading Typing State -->
+                <div class="loading-state hidden" id="loadingState">
+                    <div class="assistant-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <div class="loading-bubble">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="loading-label" id="loadingStatusLabel">Retrieving policy context & synthesizing answer...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <footer class="app-footer">
+                <form class="chat-form" id="chatForm">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="queryInput" 
+                            class="query-textarea" 
+                            placeholder="Ask a question about company policies, leave, expenses, security..." 
+                            rows="1" 
+                            maxlength="4000"
+                            required
+                        ></textarea>
+                        <button type="submit" class="btn-send" id="sendBtn" aria-label="Send query">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+                <div class="footer-caption">
+                    <span>Company XYZ Confidential • Grounded in Official Policy Repository • Zero Chain-of-Thought</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Slide-over Drawer: Source Passage Inspector -->
+    <div class="drawer-backdrop" id="sourceDrawerBackdrop">
+        <aside class="source-drawer" id="sourceDrawer">
+            <div class="drawer-header">
+                <div class="drawer-title-group">
+                    <span class="drawer-badge">SOURCE INSPECTOR</span>
+                    <h3 class="drawer-doc-name" id="drawerDocName">Document Name</h3>
+                </div>
+                <button class="btn-close-drawer" id="closeDrawerBtn" aria-label="Close Inspector">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="drawer-body">
+                <div class="drawer-meta-grid">
+                    <div class="meta-item">
+                        <span class="meta-label">Chunk ID</span>
+                        <code class="meta-val" id="drawerChunkId">chunk_001</code>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Document ID</span>
+                        <code class="meta-val" id="drawerDocId">doc_001</code>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Fusion Score (RRF)</span>
+                        <span class="meta-val score-val" id="drawerScore">0.016</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Retrieval Rank</span>
+                        <span class="meta-val" id="drawerRank">#1</span>
+                    </div>
+                </div>
+
+                <div class="drawer-section">
+                    <span class="section-title">Retrieved Policy Passage</span>
+                    <div class="passage-box" id="drawerContent">
+                        Passage text...
+                    </div>
+                </div>
+
+                <div class="drawer-section" id="drawerMetaSection">
+                    <span class="section-title">Preserved Metadata</span>
+                    <pre class="metadata-json" id="drawerMetadataJson">{}</pre>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal: System Diagnostics / Readiness -->
+    <div class="modal-backdrop" id="diagnosticModalBackdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge">SYSTEM HEALTH</span>
+                    <h3>Readiness Diagnostics</h3>
+                </div>
+                <button class="btn-close-modal" id="closeModalBtn" aria-label="Close Modal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="diag-item">
+                    <div class="diag-left">
+                        <span class="diag-title">MongoDB Atlas Connectivity</span>
+                        <span class="diag-desc">Vector index, text search, and session checkpointer collection</span>
+                    </div>
+                    <div class="diag-status" id="diagMongoStatus">
+                        <span class="dot-indicator"></span>
+                        <span class="diag-status-text">Checking...</span>
+                    </div>
+                </div>
+
+                <div class="diag-item">
+                    <div class="diag-left">
+                        <span class="diag-title">Language Model Configuration</span>
+                        <span class="diag-desc">API key authentication and generation readiness</span>
+                    </div>
+                    <div class="diag-status" id="diagModelStatus">
+                        <span class="dot-indicator"></span>
+                        <span class="diag-status-text">Checking...</span>
+                    </div>
+                </div>
+
+                <div class="diag-item">
+                    <div class="diag-left">
+                        <span class="diag-title">Session Memory State</span>
+                        <span class="diag-desc">Multi-turn conversation persistence mode</span>
+                    </div>
+                    <div class="diag-status" id="diagMemoryStatus">
+                        <span class="dot-indicator"></span>
+                        <span class="diag-status-text">Checking...</span>
+                    </div>
+                </div>
+
+                <div class="diag-item">
+                    <div class="diag-left">
+                        <span class="diag-title">API Response Latency</span>
+                        <span class="diag-desc">Round-trip latency to /api/v1/health probe</span>
+                    </div>
+                    <div class="diag-status" id="diagPingStatus">
+                        <span class="diag-status-text font-mono" id="diagPingTime">-- ms</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" id="refreshDiagBtn">Refresh Status</button>
+                <button class="btn-primary" id="closeModalOkBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon"></span>
+        <span class="toast-message" id="toastMessage">Notification message</span>
+    </div>
+
+    <script src="/ui/app.js"></script>
+</body>
+</html>

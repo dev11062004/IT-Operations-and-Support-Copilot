@@ -1,0 +1,74 @@
+{
+  "run_id": "eval_20260923_092713_1806a7",
+  "run_name": "unit_test_run",
+  "timestamp": "20260923_092713",
+  "dataset_name": "Mini Test",
+  "dataset_version": "test",
+  "mode": "retrieval_only",
+  "total_cases": 1,
+  "successful_cases": 1,
+  "error_cases": 0,
+  "mean_metrics": {
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "precision@1": 1.0,
+    "precision@3": 0.3333,
+    "precision@5": 0.2,
+    "mrr": 1.0,
+    "hit_rate@1": 1.0,
+    "hit_rate@3": 1.0,
+    "hit_rate@5": 1.0,
+    "retrieval_latency_ms": 15.0,
+    "generation_latency_ms": 0.0,
+    "total_latency_ms": 0.26,
+    "prompt_tokens": 0.0,
+    "completion_tokens": 0.0,
+    "total_tokens": 0.0,
+    "estimated_cost_usd": 0.0
+  },
+  "results": [
+    {
+      "id": "TEST-01",
+      "question": "How many days leave?",
+      "expected_answer": "25 days",
+      "category": "Annual Leave",
+      "difficulty": "easy",
+      "relevant_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "relevant_chunks": [],
+      "retrieved_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "retrieved_contexts": [
+        "UK employees receive 25 days."
+      ],
+      "generated_answer": null,
+      "decision": null,
+      "retrieval_metrics": {
+        "recall@1": 1.0,
+        "precision@1": 1.0,
+        "hit_rate@1": 1.0,
+        "recall@3": 1.0,
+        "precision@3": 0.3333,
+        "hit_rate@3": 1.0,
+        "recall@5": 1.0,
+        "precision@5": 0.2,
+        "hit_rate@5": 1.0,
+        "mrr": 1.0
+      },
+      "generation_metrics": {},
+      "operational_metrics": {
+        "retrieval_latency_ms": 15.0,
+        "generation_latency_ms": 0.0,
+        "total_latency_ms": 0.26,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "estimated_cost_usd": 0.0
+      },
+      "error": null
+    }
+  ]
+}

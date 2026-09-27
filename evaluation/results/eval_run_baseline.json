@@ -1,0 +1,167 @@
+{
+  "run_id": "run_baseline_20260901",
+  "run_name": "baseline_v1_legacy",
+  "timestamp": "2026-09-01T12:00:00",
+  "dataset_name": "Company XYZ Policy Benchmark",
+  "dataset_version": "v1.0",
+  "mode": "full",
+  "total_cases": 3,
+  "successful_cases": 3,
+  "error_cases": 0,
+  "mean_metrics": {
+    "recall@1": 0.6667,
+    "recall@3": 0.6667,
+    "precision@1": 0.6667,
+    "precision@3": 0.2222,
+    "mrr": 0.6667,
+    "hit_rate@3": 0.6667,
+    "answer_relevancy": 0.71,
+    "answer_correctness": 0.6233,
+    "faithfulness": 0.6667,
+    "context_precision": 0.3333,
+    "context_recall": 0.6667,
+    "retrieval_latency_ms": 30.0,
+    "generation_latency_ms": 760.0,
+    "total_latency_ms": 790.0,
+    "prompt_tokens": 421.6,
+    "completion_tokens": 40.6,
+    "total_tokens": 462.3,
+    "estimated_cost_usd": 0.000087
+  },
+  "results": [
+    {
+      "id": "BENCH-001",
+      "question": "In the UK, how many days of annual leave do employees receive?",
+      "expected_answer": "Full-time UK employees receive 25 days of paid annual leave per year.",
+      "category": "Annual Leave",
+      "difficulty": "easy",
+      "relevant_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "relevant_chunks": [
+        "UK Employees: Full-time employees receive 25 days"
+      ],
+      "retrieved_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "retrieved_contexts": [
+        "UK Employees: Full-time employees receive 25 days of paid annual leave per year."
+      ],
+      "generated_answer": "In the UK, full-time employees receive 25 days of paid annual leave per year. [Reference: 3 - Annual Leave.txt]",
+      "decision": "supported_by_evidence",
+      "retrieval_metrics": {
+        "recall@1": 1.0,
+        "recall@3": 1.0,
+        "precision@1": 1.0,
+        "precision@3": 0.3333,
+        "mrr": 1.0,
+        "hit_rate@3": 1.0
+      },
+      "generation_metrics": {
+        "answer_relevancy": 0.88,
+        "answer_correctness": 0.85,
+        "faithfulness": 0.95,
+        "context_precision": 0.5,
+        "context_recall": 1.0
+      },
+      "operational_metrics": {
+        "retrieval_latency_ms": 32.0,
+        "generation_latency_ms": 750.0,
+        "total_latency_ms": 782.0,
+        "prompt_tokens": 420,
+        "completion_tokens": 45,
+        "total_tokens": 465,
+        "estimated_cost_usd": 0.00009
+      },
+      "error": null
+    },
+    {
+      "id": "BENCH-002",
+      "question": "Can unused annual leave be carried over for EU employees?",
+      "expected_answer": "Yes, EU employees may carry over up to 5 days of unused annual leave.",
+      "category": "Annual Leave",
+      "difficulty": "easy",
+      "relevant_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "relevant_chunks": [
+        "EU Employees: Up to 5 days unused leave can be carried over"
+      ],
+      "retrieved_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "retrieved_contexts": [
+        "EU Employees: Up to 5 days unused leave can be carried over."
+      ],
+      "generated_answer": "EU employees are allowed to carry over up to 5 days of unused leave. [Reference: 3 - Annual Leave.txt]",
+      "decision": "supported_by_evidence",
+      "retrieval_metrics": {
+        "recall@1": 1.0,
+        "recall@3": 1.0,
+        "precision@1": 1.0,
+        "precision@3": 0.3333,
+        "mrr": 1.0,
+        "hit_rate@3": 1.0
+      },
+      "generation_metrics": {
+        "answer_relevancy": 0.85,
+        "answer_correctness": 0.82,
+        "faithfulness": 0.9,
+        "context_precision": 0.5,
+        "context_recall": 1.0
+      },
+      "operational_metrics": {
+        "retrieval_latency_ms": 28.0,
+        "generation_latency_ms": 710.0,
+        "total_latency_ms": 738.0,
+        "prompt_tokens": 395,
+        "completion_tokens": 42,
+        "total_tokens": 437,
+        "estimated_cost_usd": 0.000084
+      },
+      "error": null
+    },
+    {
+      "id": "BENCH-013",
+      "question": "What is the policy for parental and maternity leave?",
+      "expected_answer": "I couldn't find this information in the available policy content.",
+      "category": "Annual Leave",
+      "difficulty": "medium",
+      "relevant_documents": [],
+      "relevant_chunks": [],
+      "retrieved_documents": [
+        "3 - Annual Leave.txt"
+      ],
+      "retrieved_contexts": [
+        "UK Employees: 25 days. EU Employees: 30 days."
+      ],
+      "generated_answer": "Maternity leave is 12 weeks for mothers.",
+      "decision": "insufficient_evidence",
+      "retrieval_metrics": {
+        "recall@1": 0.0,
+        "recall@3": 0.0,
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "mrr": 0.0,
+        "hit_rate@3": 0.0
+      },
+      "generation_metrics": {
+        "answer_relevancy": 0.4,
+        "answer_correctness": 0.2,
+        "faithfulness": 0.15,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "operational_metrics": {
+        "retrieval_latency_ms": 30.0,
+        "generation_latency_ms": 820.0,
+        "total_latency_ms": 850.0,
+        "prompt_tokens": 450,
+        "completion_tokens": 35,
+        "total_tokens": 485,
+        "estimated_cost_usd": 0.000088
+      },
+      "error": null
+    }
+  ]
+}

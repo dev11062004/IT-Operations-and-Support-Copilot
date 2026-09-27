@@ -1,0 +1,59 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_live_openai:
+        description: 'Run tests requiring live OpenAI API Key (requires repository secret)'
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 3 * * 1' # Weekly on Mondays at 03:00 UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Live Integration Suite
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand({ping: 1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements_dev.txt
+
+      - name: Run Integration Tests
+        env:
+          MONGODB_ATLAS_CLUSTER_URI: mongodb://127.0.0.1:27017
+          MONGODB_ATLAS_DB_NAME: mcp_rag_integration_db
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FEATURE_FLAG_GUARDRAILS_ENABLED: "true"
+          FEATURE_FLAG_SESSION_MEMORY_ENABLED: "true"
+          FEATURE_FLAG_MCPSERVER_ENABLED: "false"
+        run: |
+          pytest tests/integration_tests -m integration -v --cov=mcp_rag_agent --cov-report=term-missing

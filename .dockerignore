@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python byte code and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# IDE and Editor configs
+.vscode/
+.idea/
+.gemini/
+*.swp
+*.swo
+*~
+
+# Evaluation output and logs
+evaluation/results/*.csv
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db

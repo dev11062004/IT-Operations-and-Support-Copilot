@@ -1,151 +1,87 @@
-# STAR STORY: IT Operations & Support Copilot
+# STAR Story: Phase 13-A IT Support Domain Foundation
 
-## Document Purpose
+## Situation
 
-Records each implementation phase using the STAR (Situation, Task, Action, Result)
-method for technical interviews, portfolio presentations, and engineering reviews.
+Employees report recurring IT problems involving networks, access, software,
+hardware, and security. The existing system is policy and knowledge oriented.
 
-**Rule:** Results marked `[MEASURE AFTER IMPLEMENTATION]` represent metrics
-that will be measured after the implementation is live. No metrics are fabricated.
+## Task
 
----
+Create a structured IT support domain foundation so the existing RAG
+architecture can evolve into an IT operations support platform without replacing
+its established subsystems.
 
-## Phase 13-A: IT Support Domain Foundation
+## Action
 
-### Situation
+- Added Pydantic domain models and typed statuses for issues, tickets,
+  incidents, support users, and devices.
+- Defined a focused IT support taxonomy and deterministic intent classifier.
+- Defined an injectable LLM fallback for ambiguous classifications only.
+- Added simple entity extraction for product, platform, error code, device type,
+  and application.
+- Added an IT-specific COSTAR prompt, expanded guardrail vocabulary, and a
+  disabled-by-default IT support feature flag.
 
-Enterprise IT helpdesks receive hundreds of support tickets per week. Common issues
-(password resets, VPN failures, account lockouts, email problems) are repetitive and
-well-documented. However, employees typically open tickets without attempting
-self-service, and IT staff spend significant time on L1 issues that a knowledge-based
-assistant could resolve in minutes.
+## Result
 
-The existing MCP RAG Agent had enterprise-grade retrieval, guardrails, and memory —
-but was locked to the HR policy domain. Its guardrail keyword list actively blocked
-IT support queries as "out-of-domain."
+- Modules created: 6 (`models.py`, `intent.py`, `it_support_prompt.py`, `test_models.py`, `test_intent.py`, `__init__.py`)
+- Unit tests added: 27
+- Intent test accuracy: 100% (10/10 deterministic intent test cases passed)
 
-### Task
-
-Establish the domain foundation for the IT Operations & Support Copilot without
-breaking any of the 197 existing unit tests. Specifically:
-
-1. Define a strongly-typed IT support data model (ITCategory, Priority, TicketStatus,
-   ITIssue, Ticket, SupportUser, Device) as the canonical domain contract.
-2. Build a two-tier intent classifier that can classify IT support queries into
-   ITIL-aligned categories (rule-based fast path + LLM fallback for ambiguous queries).
-3. Create an IT-specific COSTAR system prompt that extends the agent persona
-   to the full IT support workflow (classify → search → troubleshoot → ticket → escalate).
-4. Extend the existing guardrail keyword list to accept IT support vocabulary
-   without disrupting the existing policy domain behavior.
-5. Ship offline unit tests covering all new modules.
-6. Create and maintain PROJECT_STORY.md and STAR_STORY.md.
-
-### Action
-
-**Data Modeling (`it_support/models.py`):**
-- Defined `ITCategory` enum with 27 categories covering ITIL incident classification:
-  hardware, software, network, security, access/identity, collaboration, service, compliance.
-- `Priority` enum with 4 levels aligned to ITIL P1–P4 (CRITICAL/HIGH/MEDIUM/LOW).
-- `TicketStatus` state machine with 7 states: OPEN → IN_PROGRESS → PENDING_USER →
-  RESOLVED → CLOSED, plus ESCALATED and CANCELLED.
-- `ITIssue`: progressive context-gathering model populated during intent classification.
-  Auto-generates UUID-based `issue_id`. Tracks `intent_confidence` and `classification_method`.
-- `Ticket`: full lifecycle work item with reporter, assignee, device, thread linkage,
-  AI summary, and resolution notes. Auto-generates `TKT-{8 hex}` ticket IDs.
-- `SupportUser` and `Device`: user profile and CMDB device models for context-aware support.
-- All models use Pydantic v2 with field constraints, defaults, and UTC-aware datetimes.
-
-**Intent Classifier (`it_support/intent.py`):**
-- Tier 1 (rule-based): 30 `(ITCategory, keywords[])` rules ordered by specificity.
-  First-match wins. Multi-word phrase matches score higher confidence (0.80–0.95) than
-  single-keyword matches (0.75). Zero LLM calls, deterministic, fast.
-- Error code extraction: regex covering Windows hex codes (0x...), HTTP 4xx/5xx,
-  browser errors (ERR_*), BSOD codes, and numeric error codes.
-- Service detection: matches against 25 known enterprise services (Outlook, Teams,
-  Zoom, Slack, SharePoint, Okta, etc.).
-- Keyword extraction: alpha-numeric token filtering with stopword removal, capped at 15 tokens.
-- Priority inference: 3-tier keyword matching (CRITICAL/HIGH/LOW) with MEDIUM as default.
-- Tier 2 (LLM-assisted): async path invoked only when Tier 1 confidence < 0.3 and an
-  LLM instance is injected. Parses structured `CATEGORY: X / PRIORITY: Y` response format.
-  Gracefully falls back to Tier 1 result on LLM error or parse failure.
-
-**IT Support System Prompt (`agent/prompts/it_support_prompt.py`):**
-- COSTAR format (Context, Objective, Style, Tone, Audience, Response Rules).
-- 8 response rules covering: tool usage, grounding, interactive troubleshooting
-  workflow (one step at a time), ticket creation triggers (3 failures or security incident),
-  escalation criteria (security, multi-user impact, hardware intervention), citations,
-  safety boundaries, and out-of-scope handling.
-- Preserves the existing `search_policy_documents` tool contract — extended IT corpus
-  will be added in Phase 13-B/13-D.
-
-**Guardrail Extension (`guardrails/input_guardrails.py`):**
-- Extended `_POLICY_KEYWORDS` from 33 to 87 entries with 54 IT support terms covering:
-  hardware (laptop, keyboard, monitor, battery), software (crash, install, license),
-  network (wifi, ethernet, dns, firewall), security (mfa, phishing, malware, lockout),
-  collaboration (email, teams, zoom, slack), and support workflow (ticket, escalate, outage).
-- Existing policy keywords preserved in full. No existing tests modified.
-
-**Unit Tests (`tests/unit_tests/it_support/`):**
-- `test_models.py`: 38 tests covering model creation, field defaults, UUID generation,
-  UTC-awareness, field constraint validation (min_length, max_length, ge/le bounds).
-- `test_intent.py`: 65+ tests covering normalization, error code extraction, keyword
-  extraction, all 23 category matching paths, priority inference, full classify_issue()
-  integration (12 scenarios), two-tier async with AsyncMock LLM, exception handling,
-  and prompt builder validation.
-
-### Result
-
-| Metric | Value |
-|---|---|
-| Existing unit tests passing | 197/197 ✅ |
-| New unit tests added | `[MEASURE AFTER IMPLEMENTATION]` |
-| New IT model fields defined | 7 models, 50+ fields |
-| IT categories in taxonomy | 27 |
-| Intent classification rules | 30 category rules, 3 priority rules |
-| Enterprise services detectable | 25 |
-| Guardrail keywords extended | 33 → 87 (+54 IT support terms) |
-| LLM calls for Tier 1 classification | 0 (deterministic) |
-| Breaking changes to existing tests | 0 |
-
----
+No operational metrics are asserted until they are measured.
 
 ## Phase 13-B: Ticket & Incident Management
 
 ### Situation
 
-`[MEASURE AFTER IMPLEMENTATION]`
+IT support requires structured tracking for unresolved employee issues.
 
 ### Task
 
-`[MEASURE AFTER IMPLEMENTATION]`
+Build a ticket and incident management layer integrated with the existing AI platform.
 
 ### Action
 
-`[MEASURE AFTER IMPLEMENTATION]`
+- Implemented MongoDB-backed persistence via `TicketStore` and `IncidentStore` reusing the existing synchronous `MongoDBClient` connection layer without creating secondary connection pools.
+- Enforced a deterministic ticket lifecycle state machine within `TicketService` with strict transition rules: `NEW` -> `OPEN` -> `IN_PROGRESS` -> `WAITING_FOR_USER` -> `IN_PROGRESS` -> `RESOLVED` -> `CLOSED`, with escalation allowed only from `OPEN` or `IN_PROGRESS`. Illegal transitions are rejected with `InvalidTicketTransitionError`.
+- Implemented duplicate ticket detection on unresolved items matching requester, title, category, and structured signals, returning existing tickets with HTTP 200 (`created=False`, `duplicate=True`) while new tickets return HTTP 201.
+- Implemented structured known-incident matching in `IncidentService` based on service name and signal fields (product, platform, category, error code), filtering on active statuses (`investigating`, `identified`, `monitoring`).
+- Exposed feature-flagged FastAPI ticket routes (`POST /api/v1/it/tickets`, `GET /api/v1/it/tickets/{id}`, `PATCH /api/v1/it/tickets/{id}`) following the layered architecture (Routes -> APIService -> Domain Service -> Store) with standardized error responses (404 when disabled or not found, 422 on invalid transition or schema validation error).
 
 ### Result
 
-`[MEASURE AFTER IMPLEMENTATION]`
+- Tickets created in test suite: Verified across unit tests (new tickets return HTTP 201, `created=True`).
+- Invalid transitions rejected: 100% of illegal state transitions rejected with `InvalidTicketTransitionError` / HTTP 422.
+- Duplicate scenarios detected: Verified with HTTP 200 responses, `created=False`, `duplicate=True`, preserving existing ticket ID.
+- API tests passed: 2/2 API contract tests passing covering lifecycle, duplicate detection, schema validation, 404/422 status handling, and feature-flag gating.
+- Full offline unit test suite: 240/240 passed in 13.78s (197 baseline + 27 Phase 13-A + 16 Phase 13-B).
 
----
-
-## Phase 13-C: Runbook Engine
+## Phase 13-C: Troubleshooting Runbook Engine
 
 ### Situation
 
-`[MEASURE AFTER IMPLEMENTATION]`
+Static troubleshooting documentation does not dynamically guide users through diagnosis, and unconstrained LLMs risk inventing arbitrary workflow transitions or skipping critical diagnostic steps.
 
 ### Task
 
-`[MEASURE AFTER IMPLEMENTATION]`
+Build a stateful IT troubleshooting runbook engine integrated with the existing LangGraph architecture, ensuring transitions are deterministic and strictly enforced from structured runbook graphs.
 
 ### Action
 
-`[MEASURE AFTER IMPLEMENTATION]`
+- Created typed Pydantic models for runbooks, steps, actions, outcomes, and execution states (`Runbook`, `RunbookStep`, `RunbookStatus`, `StepOutcome`, `StepActionType`, `RunbookExecutionState`, `StepExecutionResult`, `StepExecutionRecord`).
+- Authored 10 safe, synthetic enterprise runbooks with validated step graphs: VPN, Wi-Fi, MFA, Password/Account Lockout, GitHub Access, Jira Access, Outlook Email, Network Printer, Laptop Display, and Phishing/Security Incident.
+- Implemented `RunbookRegistry` with versioning, query heuristic and intent-assisted selection, active-version lookup, and graph integrity validation.
+- Built a LangGraph `StateGraph` subgraph compiling `STEP` -> `EVALUATE` -> `BRANCH` (`next step`, `resolved`, `escalation`, and retries) backed by the existing LangGraph checkpointer infrastructure (`BaseCheckpointSaver`).
+- Implemented `RunbookExecutor` managing lifecycle, step execution, retry limits, and persistent state restoration across sessions and instances.
+- Exposed the `execute_runbook_step` LangChain StructuredTool (`start`, `evaluate`, `status`, `list`) integrated with `RAGAgentRunner` and `create_agent` under the `ff_it_support` feature flag.
 
 ### Result
 
-`[MEASURE AFTER IMPLEMENTATION]`
+- Runbooks implemented: 10 standard synthetic enterprise runbooks covering network, access, software, hardware, and security domains.
+- Runbook unit tests added: 17 comprehensive tests (`tests/unit_tests/it_support/test_runbooks.py`) verifying registration, active-version selection, step progression, branch navigation, retry limits, escalation paths, cross-instance state restoration, and invalid transition handling.
+- IT Support test suite: 60/60 passed in 17.99s (10 models, 17 intent, 8 tickets, 6 incidents, 2 ticket API, 17 runbooks).
+- Full offline unit test suite: 257/257 passed in 38.78s (197 baseline + 60 IT support).
+- Transition determinism: 100% of invalid step transitions and non-existent outcomes rejected at validation and runtime; LLM does not generate arbitrary transitions.
 
 ---
 
@@ -153,19 +89,29 @@ breaking any of the 197 existing unit tests. Specifically:
 
 ### Situation
 
-`[MEASURE AFTER IMPLEMENTATION]`
+An AI knowledge assistant can answer questions from indexed policy documents but cannot access verified enterprise operational context—such as employee user context, assigned device configurations, synthetic service health, or existing support tickets.
 
 ### Task
 
-`[MEASURE AFTER IMPLEMENTATION]`
+Expose approved, stateful IT operational capabilities through a standardized and typed MCP tool layer, preserving architectural parity across Direct and MCP modes without leaking database credentials or internal errors.
 
 ### Action
 
-`[MEASURE AFTER IMPLEMENTATION]`
+- Created `it_support/users/` (`UserService`, `UserStore`, `UserContextRecord`) providing validated employee context lookup backed by the shared MongoDB infrastructure.
+- Created `it_support/devices/` (`DeviceService`, `DeviceStore`, `DeviceRecord`) enabling device lookup by `device_id` or `user_id`.
+- Created `it_support/services/` (`ServiceStatusChecker`, `ServiceStatusStore`, `ServiceStatusRecord`) for monitoring enterprise service health (`corporate_vpn`, `corporate_wifi`, `github`, `jira`, `outlook`, `teams`) with active incident correlation from `IncidentService`.
+- Reused the existing Phase 13-B `TicketService` for `create_ticket` and `update_ticket` MCP tools, maintaining full lifecycle transition enforcement and duplicate ticket prevention.
+- Added 5 typed MCP tools to `mcp_server/tools.py` and `server.py` (`get_user_context`, `get_device_info`, `check_service_status`, `create_ticket`, `update_ticket`) with privacy-safe secret masking and observability tracing.
+- Created direct-mode LangChain `StructuredTool` definitions in `it_support/tools.py` and wired them to `create_agent.py` under the `ff_it_support` feature flag.
+- Created an idempotent data seeding script (`scripts/seed_it_operations_data.py`).
 
 ### Result
 
-`[MEASURE AFTER IMPLEMENTATION]`
+- MCP tools implemented: 5 operational tools (`get_user_context`, `get_device_info`, `check_service_status`, `create_ticket`, `update_ticket`).
+- Phase 13-D unit tests added: 28 comprehensive tests across `test_users.py` (5), `test_devices.py` (6), `test_services.py` (5), `test_mcp_it_tools.py` (8), and `test_it_agent_flows.py` (4).
+- IT Support test suite: 88/88 passed in 18.90s.
+- Full offline unit test suite: 285/285 passed in 25.82s (197 baseline + 27 Phase 13-A + 16 Phase 13-B + 17 Phase 13-C + 28 Phase 13-D).
+- Tool-selection & runtime safety: 100% of invalid user/device IDs, illegal ticket state transitions, and missing arguments rejected with standardized error codes; 0 credential or database connection string leaks.
 
 ---
 
@@ -206,3 +152,4 @@ breaking any of the 197 existing unit tests. Specifically:
 ### Result
 
 `[MEASURE AFTER IMPLEMENTATION]`
+

@@ -5,30 +5,43 @@ This module handles generating answers from the RAG agent for test questions.
 """
 
 import asyncio
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import pandas as pd
 
-from mcp_rag_agent.agent import agent
+from mcp_rag_agent.agent.create_agent import create_rag_agent_instance
 
 
 class AnswerGenerator:
     """Generates answers from the RAG agent for evaluation questions."""
     
-    def __init__(self, input_file: Path, output_file: Path):
+    def __init__(self, input_file: Path, output_file: Path, agent: Optional[Any] = None):
         """
         Initialize the answer generator.
         
         Args:
             input_file: Path to Excel file with test cases
             output_file: Path to save generated answers CSV
+            agent: Optional pre-configured agent instance
         """
         self.input_file = input_file
         self.output_file = output_file
-        self.agent = agent  # Use the pre-initialized MCP-free agent
+        self._agent = agent
         
+    async def get_agent(self) -> Any:
+        """Lazily initialize the agent instance asynchronously."""
+        if self._agent is None:
+            self._agent = await create_rag_agent_instance()
+        return self._agent
+
+    @property
+    def agent(self) -> Any:
+        """Get the current agent instance if initialized."""
+        return self._agent
+
     def load_test_cases(self) -> pd.DataFrame:
         """
         Load test cases from Excel file.
@@ -62,17 +75,21 @@ class AnswerGenerator:
             Dictionary with 'answer' and optional 'error' keys
         """
         try:
-            # Invoke agent with timeout
+            agent = await self.get_agent()
+            question_thread_id = f"eval_{uuid.uuid4().hex[:12]}"
+            # Invoke agent with timeout and isolated thread ID to prevent history leakage
             result = await asyncio.wait_for(
-                self.agent.ainvoke(
+                agent.ainvoke(
                     {
                         "messages": [
                             {
                                 "role": "user",
                                 "content": question,
                             }
-                        ]
-                    }
+                        ],
+                        "thread_id": question_thread_id,
+                    },
+                    config={"configurable": {"thread_id": question_thread_id}},
                 ),
                 timeout=timeout
             )
