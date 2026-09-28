@@ -2,8 +2,10 @@
 
 from datetime import datetime
 from pathlib import Path
+
 from evaluation.reports.comparator import RegressionComparator
 from evaluation.runners.eval_runner import EvalRunItemResult, EvalRunSummary
+
 
 def main():
     reports_dir = Path("evaluation/reports")
@@ -22,12 +24,35 @@ def main():
             relevant_documents=["3 - Annual Leave.txt"],
             relevant_chunks=["UK Employees: Full-time employees receive 25 days"],
             retrieved_documents=["3 - Annual Leave.txt"],
-            retrieved_contexts=["UK Employees: Full-time employees receive 25 days of paid annual leave per year."],
+            retrieved_contexts=[
+                "UK Employees: Full-time employees receive 25 days of paid annual leave per year."
+            ],
             generated_answer="In the UK, full-time employees receive 25 days of paid annual leave per year. [Reference: 3 - Annual Leave.txt]",
             decision="supported_by_evidence",
-            retrieval_metrics={"recall@1": 1.0, "recall@3": 1.0, "precision@1": 1.0, "precision@3": 0.3333, "mrr": 1.0, "hit_rate@3": 1.0},
-            generation_metrics={"answer_relevancy": 0.88, "answer_correctness": 0.85, "faithfulness": 0.95, "context_precision": 0.50, "context_recall": 1.0},
-            operational_metrics={"retrieval_latency_ms": 32.0, "generation_latency_ms": 750.0, "total_latency_ms": 782.0, "prompt_tokens": 420, "completion_tokens": 45, "total_tokens": 465, "estimated_cost_usd": 0.00009},
+            retrieval_metrics={
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "precision@1": 1.0,
+                "precision@3": 0.3333,
+                "mrr": 1.0,
+                "hit_rate@3": 1.0,
+            },
+            generation_metrics={
+                "answer_relevancy": 0.88,
+                "answer_correctness": 0.85,
+                "faithfulness": 0.95,
+                "context_precision": 0.50,
+                "context_recall": 1.0,
+            },
+            operational_metrics={
+                "retrieval_latency_ms": 32.0,
+                "generation_latency_ms": 750.0,
+                "total_latency_ms": 782.0,
+                "prompt_tokens": 420,
+                "completion_tokens": 45,
+                "total_tokens": 465,
+                "estimated_cost_usd": 0.00009,
+            },
         ),
         EvalRunItemResult(
             id="BENCH-002",
@@ -36,14 +61,39 @@ def main():
             category="Annual Leave",
             difficulty="easy",
             relevant_documents=["3 - Annual Leave.txt"],
-            relevant_chunks=["EU Employees: Up to 5 days unused leave can be carried over"],
+            relevant_chunks=[
+                "EU Employees: Up to 5 days unused leave can be carried over"
+            ],
             retrieved_documents=["3 - Annual Leave.txt"],
-            retrieved_contexts=["EU Employees: Up to 5 days unused leave can be carried over."],
+            retrieved_contexts=[
+                "EU Employees: Up to 5 days unused leave can be carried over."
+            ],
             generated_answer="EU employees are allowed to carry over up to 5 days of unused leave. [Reference: 3 - Annual Leave.txt]",
             decision="supported_by_evidence",
-            retrieval_metrics={"recall@1": 1.0, "recall@3": 1.0, "precision@1": 1.0, "precision@3": 0.3333, "mrr": 1.0, "hit_rate@3": 1.0},
-            generation_metrics={"answer_relevancy": 0.85, "answer_correctness": 0.82, "faithfulness": 0.90, "context_precision": 0.50, "context_recall": 1.0},
-            operational_metrics={"retrieval_latency_ms": 28.0, "generation_latency_ms": 710.0, "total_latency_ms": 738.0, "prompt_tokens": 395, "completion_tokens": 42, "total_tokens": 437, "estimated_cost_usd": 0.000084},
+            retrieval_metrics={
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "precision@1": 1.0,
+                "precision@3": 0.3333,
+                "mrr": 1.0,
+                "hit_rate@3": 1.0,
+            },
+            generation_metrics={
+                "answer_relevancy": 0.85,
+                "answer_correctness": 0.82,
+                "faithfulness": 0.90,
+                "context_precision": 0.50,
+                "context_recall": 1.0,
+            },
+            operational_metrics={
+                "retrieval_latency_ms": 28.0,
+                "generation_latency_ms": 710.0,
+                "total_latency_ms": 738.0,
+                "prompt_tokens": 395,
+                "completion_tokens": 42,
+                "total_tokens": 437,
+                "estimated_cost_usd": 0.000084,
+            },
         ),
         EvalRunItemResult(
             id="BENCH-013",
@@ -57,9 +107,30 @@ def main():
             retrieved_contexts=["UK Employees: 25 days. EU Employees: 30 days."],
             generated_answer="Maternity leave is 12 weeks for mothers.",  # Hallucinated guess in baseline!
             decision="insufficient_evidence",
-            retrieval_metrics={"recall@1": 0.0, "recall@3": 0.0, "precision@1": 0.0, "precision@3": 0.0, "mrr": 0.0, "hit_rate@3": 0.0},
-            generation_metrics={"answer_relevancy": 0.40, "answer_correctness": 0.20, "faithfulness": 0.15, "context_precision": 0.0, "context_recall": 0.0},
-            operational_metrics={"retrieval_latency_ms": 30.0, "generation_latency_ms": 820.0, "total_latency_ms": 850.0, "prompt_tokens": 450, "completion_tokens": 35, "total_tokens": 485, "estimated_cost_usd": 0.000088},
+            retrieval_metrics={
+                "recall@1": 0.0,
+                "recall@3": 0.0,
+                "precision@1": 0.0,
+                "precision@3": 0.0,
+                "mrr": 0.0,
+                "hit_rate@3": 0.0,
+            },
+            generation_metrics={
+                "answer_relevancy": 0.40,
+                "answer_correctness": 0.20,
+                "faithfulness": 0.15,
+                "context_precision": 0.0,
+                "context_recall": 0.0,
+            },
+            operational_metrics={
+                "retrieval_latency_ms": 30.0,
+                "generation_latency_ms": 820.0,
+                "total_latency_ms": 850.0,
+                "prompt_tokens": 450,
+                "completion_tokens": 35,
+                "total_tokens": 485,
+                "estimated_cost_usd": 0.000088,
+            },
         ),
     ]
 
@@ -112,9 +183,30 @@ def main():
             retrieved_contexts=[],
             generated_answer="I couldn't find this information in the available policy content. Please consult Company XYZ HR or your manager for guidance.",
             decision="insufficient_evidence",
-            retrieval_metrics={"recall@1": 1.0, "recall@3": 1.0, "precision@1": 1.0, "precision@3": 1.0, "mrr": 1.0, "hit_rate@3": 1.0},
-            generation_metrics={"answer_relevancy": 0.95, "answer_correctness": 1.0, "faithfulness": 1.0, "context_precision": 1.0, "context_recall": 1.0},
-            operational_metrics={"retrieval_latency_ms": 18.0, "generation_latency_ms": 420.0, "total_latency_ms": 438.0, "prompt_tokens": 150, "completion_tokens": 28, "total_tokens": 178, "estimated_cost_usd": 0.000039},
+            retrieval_metrics={
+                "recall@1": 1.0,
+                "recall@3": 1.0,
+                "precision@1": 1.0,
+                "precision@3": 1.0,
+                "mrr": 1.0,
+                "hit_rate@3": 1.0,
+            },
+            generation_metrics={
+                "answer_relevancy": 0.95,
+                "answer_correctness": 1.0,
+                "faithfulness": 1.0,
+                "context_precision": 1.0,
+                "context_recall": 1.0,
+            },
+            operational_metrics={
+                "retrieval_latency_ms": 18.0,
+                "generation_latency_ms": 420.0,
+                "total_latency_ms": 438.0,
+                "prompt_tokens": 150,
+                "completion_tokens": 28,
+                "total_tokens": 178,
+                "estimated_cost_usd": 0.000039,
+            },
         ),
     ]
 
@@ -162,8 +254,12 @@ def main():
 
     # Compare
     comparator = RegressionComparator(baseline_summary, current_summary)
-    report_md = comparator.generate_markdown_report(output_path=reports_dir / "sample_regression_report.md")
-    print(f"Generated sample regression report successfully!")
+    _report_md = comparator.generate_markdown_report(
+        output_path=reports_dir / "sample_regression_report.md"
+    )
+    _ = _report_md
+    print("Generated sample regression report successfully!")
+
 
 if __name__ == "__main__":
     main()

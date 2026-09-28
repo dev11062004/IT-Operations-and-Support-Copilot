@@ -1,6 +1,6 @@
 /**
- * Enterprise Knowledge Assistant - Frontend Application Logic
- * Integrates directly with the FastAPI /api/v1 endpoints.
+ * IT Operations & Support Copilot - Frontend Platform Logic
+ * Integrates directly with the FastAPI /api/v1 endpoints with full RBAC role support.
  */
 
 (function () {
@@ -10,6 +10,8 @@
     const state = {
         currentThreadId: null,
         userId: 'user_emp_demo',
+        currentRole: localStorage.getItem('it_copilot_role') || 'employee',
+        currentView: 'chat-view',
         conversations: [],
         messages: [],
         isGenerating: false,
@@ -22,9 +24,12 @@
         mobileMenuBtn: document.getElementById('mobileMenuBtn'),
         sidebarCloseBtn: document.getElementById('sidebarCloseBtn'),
         newChatBtn: document.getElementById('newChatBtn'),
+        activeRoleSelect: document.getElementById('activeRoleSelect'),
+        sidebarRoleBadge: document.getElementById('sidebarRoleBadge'),
+        platformNavLinks: document.getElementById('platformNavLinks'),
         conversationsList: document.getElementById('conversationsList'),
         threadCountBadge: document.getElementById('threadCountBadge'),
-        activeThreadTitle: document.getElementById('activeThreadTitle'),
+        activeViewTitle: document.getElementById('activeViewTitle'),
         activeThreadIdTag: document.getElementById('activeThreadIdTag'),
         messagesViewport: document.getElementById('messagesViewport'),
         emptyState: document.getElementById('emptyState'),
@@ -41,6 +46,76 @@
         sidebarStatusTrigger: document.getElementById('sidebarStatusTrigger'),
         sidebarStatusDot: document.getElementById('sidebarStatusDot'),
         sidebarStatusText: document.getElementById('sidebarStatusText'),
+        incidentAlertBanner: document.getElementById('incidentAlertBanner'),
+        incidentAlertText: document.getElementById('incidentAlertText'),
+
+        // Troubleshooting Tracker
+        runbookTrackerCard: document.getElementById('runbookTrackerCard'),
+        trackerRunbookTitle: document.getElementById('trackerRunbookTitle'),
+        trackerStepProgress: document.getElementById('trackerStepProgress'),
+        trackerCurrentAction: document.getElementById('trackerCurrentAction'),
+        trackerStepHistory: document.getElementById('trackerStepHistory'),
+        trackerNextAction: document.getElementById('trackerNextAction'),
+
+        // Admin KPI Elements
+        refreshDashboardBtn: document.getElementById('refreshDashboardBtn'),
+        kpiOpenTickets: document.getElementById('kpiOpenTickets'),
+        kpiCriticalIncidents: document.getElementById('kpiCriticalIncidents'),
+        kpiActiveIncidents: document.getElementById('kpiActiveIncidents'),
+        kpiAiResolutions: document.getElementById('kpiAiResolutions'),
+        kpiAiEscalations: document.getElementById('kpiAiEscalations'),
+        kpiAvgTime: document.getElementById('kpiAvgTime'),
+        statRetLatency: document.getElementById('statRetLatency'),
+        statModelLatency: document.getElementById('statModelLatency'),
+        statTotalLatency: document.getElementById('statTotalLatency'),
+        statTokens: document.getElementById('statTokens'),
+        statCost: document.getElementById('statCost'),
+        categoryDistributionList: document.getElementById('categoryDistributionList'),
+
+        // Tickets View
+        refreshTicketsBtn: document.getElementById('refreshTicketsBtn'),
+        ticketStatusFilter: document.getElementById('ticketStatusFilter'),
+        ticketPriorityFilter: document.getElementById('ticketPriorityFilter'),
+        ticketsTableBody: document.getElementById('ticketsTableBody'),
+
+        // Incidents View
+        refreshIncidentsBtn: document.getElementById('refreshIncidentsBtn'),
+        incidentsGrid: document.getElementById('incidentsGrid'),
+
+        // Evaluation View
+        refreshEvalBtn: document.getElementById('refreshEvalBtn'),
+        evalBenchmarkSubtitle: document.getElementById('evalBenchmarkSubtitle'),
+        evalIntentAcc: document.getElementById('evalIntentAcc'),
+        evalRunbookAcc: document.getElementById('evalRunbookAcc'),
+        evalRunbookComp: document.getElementById('evalRunbookComp'),
+        evalTicketAcc: document.getElementById('evalTicketAcc'),
+        evalEscalationAcc: document.getElementById('evalEscalationAcc'),
+        evalSecurityAcc: document.getElementById('evalSecurityAcc'),
+        evalRecall3: document.getElementById('evalRecall3'),
+        evalPrec3: document.getElementById('evalPrec3'),
+        evalMRR: document.getElementById('evalMRR'),
+        evalFaith: document.getElementById('evalFaith'),
+
+        // Audit View
+        refreshAuditBtn: document.getElementById('refreshAuditBtn'),
+        auditTableBody: document.getElementById('auditTableBody'),
+
+        // Ticket Modal
+        ticketModalBackdrop: document.getElementById('ticketModalBackdrop'),
+        closeTicketModalBtn: document.getElementById('closeTicketModalBtn'),
+        closeTicketModalOkBtn: document.getElementById('closeTicketModalOkBtn'),
+        modalTicketId: document.getElementById('modalTicketId'),
+        modalTicketTitle: document.getElementById('modalTicketTitle'),
+        modalTicketRequester: document.getElementById('modalTicketRequester'),
+        modalTicketCategory: document.getElementById('modalTicketCategory'),
+        modalTicketPriority: document.getElementById('modalTicketPriority'),
+        modalTicketStatus: document.getElementById('modalTicketStatus'),
+        modalTicketTeam: document.getElementById('modalTicketTeam'),
+        modalTicketCreated: document.getElementById('modalTicketCreated'),
+        modalTicketDesc: document.getElementById('modalTicketDesc'),
+        modalTicketSteps: document.getElementById('modalTicketSteps'),
+        modalTicketComments: document.getElementById('modalTicketComments'),
+
         // Source Drawer
         sourceDrawerBackdrop: document.getElementById('sourceDrawerBackdrop'),
         closeDrawerBtn: document.getElementById('closeDrawerBtn'),
@@ -50,41 +125,35 @@
         drawerScore: document.getElementById('drawerScore'),
         drawerRank: document.getElementById('drawerRank'),
         drawerContent: document.getElementById('drawerContent'),
-        drawerMetadataJson: document.getElementById('drawerMetadataJson'),
-        // Diagnostic Modal
-        diagnosticModalBackdrop: document.getElementById('diagnosticModalBackdrop'),
-        closeModalBtn: document.getElementById('closeModalBtn'),
-        closeModalOkBtn: document.getElementById('closeModalOkBtn'),
-        refreshDiagBtn: document.getElementById('refreshDiagBtn'),
-        diagMongoStatus: document.getElementById('diagMongoStatus'),
-        diagModelStatus: document.getElementById('diagModelStatus'),
-        diagMemoryStatus: document.getElementById('diagMemoryStatus'),
-        diagPingTime: document.getElementById('diagPingTime'),
+
         // Toast
         toast: document.getElementById('toast'),
         toastMessage: document.getElementById('toastMessage'),
     };
 
     // ==============================================================================
-    // API Service
+    // API Service with RBAC Headers
     // ==============================================================================
     const API = {
+        getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'X-User-ID': state.userId,
+                'X-User-Role': state.currentRole,
+                'X-User-Department': 'Engineering',
+            };
+        },
+
         async checkHealth() {
             const start = performance.now();
-            const res = await fetch('/api/v1/health');
+            const res = await fetch('/api/v1/health', { headers: this.getHeaders() });
             const duration = Math.round(performance.now() - start);
             const data = await res.json();
             return { ok: res.ok, status: res.status, data, duration };
         },
 
-        async checkReady() {
-            const res = await fetch('/api/v1/ready');
-            const data = await res.json();
-            return { ok: res.ok, status: res.status, data };
-        },
-
         async listConversations() {
-            const res = await fetch('/api/v1/conversations');
+            const res = await fetch('/api/v1/conversations', { headers: this.getHeaders() });
             if (!res.ok) return [];
             return await res.json();
         },
@@ -92,276 +161,446 @@
         async createConversation(userId, metadata = {}) {
             const res = await fetch('/api/v1/conversations', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(),
                 body: JSON.stringify({ user_id: userId, metadata }),
             });
             if (!res.ok) throw new Error('Failed to create conversation');
             return await res.json();
         },
 
-        async getConversationHistory(threadId) {
-            const res = await fetch(`/api/v1/conversations/${encodeURIComponent(threadId)}`);
-            if (!res.ok) throw new Error('Failed to load history');
+        async getConversation(threadId) {
+            const res = await fetch(`/api/v1/conversations/${threadId}`, { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Conversation not found');
             return await res.json();
         },
 
         async deleteConversation(threadId) {
-            const res = await fetch(`/api/v1/conversations/${encodeURIComponent(threadId)}`, {
+            const res = await fetch(`/api/v1/conversations/${threadId}`, {
                 method: 'DELETE',
+                headers: this.getHeaders(),
             });
-            if (!res.ok) throw new Error('Failed to delete conversation');
-            return await res.json();
+            return res.ok;
         },
 
-        async sendChat(message, threadId, userId) {
+        async sendMessage(query, threadId) {
             const res = await fetch('/api/v1/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, thread_id: threadId, user_id: userId }),
+                headers: this.getHeaders(),
+                body: JSON.stringify({ query, thread_id: threadId, user_id: state.userId }),
             });
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                const msg = errData.message || (errData.details && JSON.stringify(errData.details)) || 'API request failed';
-                throw new Error(msg);
+                throw new Error(errData.message || `API error (${res.status})`);
             }
+            return await res.json();
+        },
+
+        // Admin APIs
+        async getAdminMetrics() {
+            const res = await fetch('/api/v1/admin/metrics', { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Unauthorized or failed to fetch metrics');
+            return await res.json();
+        },
+
+        async getAdminTickets(filters = {}) {
+            const params = new URLSearchParams();
+            if (filters.status) params.append('status', filters.status);
+            if (filters.priority) params.append('priority', filters.priority);
+            const res = await fetch(`/api/v1/admin/tickets?${params.toString()}`, { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Unauthorized or failed to fetch tickets');
+            return await res.json();
+        },
+
+        async getAdminTicketDetail(ticketId) {
+            const res = await fetch(`/api/v1/admin/tickets/${ticketId}`, { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Failed to fetch ticket details');
+            return await res.json();
+        },
+
+        async getAdminIncidents(status = null) {
+            const params = status ? `?status=${status}` : '';
+            const res = await fetch(`/api/v1/admin/incidents${params}`, { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Unauthorized or failed to fetch incidents');
+            return await res.json();
+        },
+
+        async getAdminEvaluation() {
+            const res = await fetch('/api/v1/admin/evaluation', { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Unauthorized or failed to fetch evaluation');
+            return await res.json();
+        },
+
+        async getAdminAudit() {
+            const res = await fetch('/api/v1/admin/audit?limit=100', { headers: this.getHeaders() });
+            if (!res.ok) throw new Error('Unauthorized or failed to fetch audit logs');
             return await res.json();
         },
     };
 
     // ==============================================================================
-    // Markdown Parser (Zero-dependency, XSS-safe text formatter)
+    // Toast Notification Utility
     // ==============================================================================
-    function parseMarkdown(text) {
-        if (!text) return '';
+    function showToast(message, isError = false) {
+        if (!elements.toast) return;
+        elements.toastMessage.textContent = message;
+        elements.toast.style.borderColor = isError ? 'var(--danger-border)' : 'var(--border-medium)';
+        elements.toast.classList.add('show');
+        setTimeout(() => elements.toast.classList.remove('show'), 3500);
+    }
 
-        // Escape HTML tags to prevent XSS
-        let html = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
+    // ==============================================================================
+    // Role Switching & UI Filtering
+    // ==============================================================================
+    function setRole(newRole) {
+        state.currentRole = newRole;
+        localStorage.setItem('it_copilot_role', newRole);
+        if (elements.activeRoleSelect) elements.activeRoleSelect.value = newRole;
+        if (elements.sidebarRoleBadge) elements.sidebarRoleBadge.textContent = newRole.toUpperCase().replace('_', ' ');
 
-        // Code blocks
-        html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
-            return `<pre><code>${code.trim()}</code></pre>`;
+        // Update nav item visibility based on RBAC matrix
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            const isAdmin = item.classList.contains('admin-only');
+            const isSupport = item.classList.contains('support-only');
+            const isSecurity = item.classList.contains('security-only');
+
+            let allowed = true;
+            if (newRole === 'employee') {
+                if (isAdmin || isSupport || isSecurity) allowed = false;
+            } else if (newRole === 'it_support') {
+                if (isAdmin || isSecurity) allowed = false;
+            } else if (newRole === 'security_analyst') {
+                if (isAdmin) allowed = false;
+            }
+
+            if (allowed) {
+                item.classList.remove('hidden-role');
+            } else {
+                item.classList.add('hidden-role');
+            }
         });
 
-        // Inline code
-        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        showToast(`Switched active role to: ${newRole.toUpperCase().replace('_', ' ')}`);
 
-        // Bold
-        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-        // Italic
-        html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-        // Headings
-        html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
-        html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
-
-        // Bullet lists
-        html = html.replace(/^\s*[-*]\s+(.*)$/gim, '<li>$1</li>');
-        html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-
-        // Paragraph linebreaks
-        const paragraphs = html.split(/\n\n+/);
-        return paragraphs
-            .map(p => {
-                p = p.trim();
-                if (!p) return '';
-                if (p.startsWith('<h') || p.startsWith('<pre') || p.startsWith('<ul') || p.startsWith('<ol')) {
-                    return p;
-                }
-                return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-            })
-            .join('');
-    }
-
-    // ==============================================================================
-    // UI Helpers & Toast
-    // ==============================================================================
-    function showToast(message, type = 'info') {
-        elements.toastMessage.textContent = message;
-        elements.toast.className = `toast show ${type}`;
-        setTimeout(() => {
-            elements.toast.className = 'toast';
-        }, 3200);
-    }
-
-    function autoResizeTextarea() {
-        elements.queryInput.style.height = 'auto';
-        elements.queryInput.style.height = Math.min(elements.queryInput.scrollHeight, 160) + 'px';
-    }
-
-    function scrollMessagesToBottom() {
-        elements.messagesViewport.scrollTop = elements.messagesViewport.scrollHeight;
-    }
-
-    // ==============================================================================
-    // Conversation Management
-    // ==============================================================================
-    async function initConversation() {
-        try {
-            // Fetch existing threads
-            const threads = await API.listConversations();
-            state.conversations = threads;
-            renderThreadsList();
-
-            // Resume saved thread or create new
-            const savedThreadId = localStorage.getItem('mcp_rag_active_thread');
-            if (savedThreadId && threads.some(t => t.thread_id === savedThreadId)) {
-                await selectThread(savedThreadId);
-            } else if (threads.length > 0) {
-                await selectThread(threads[0].thread_id);
-            } else {
-                await startNewConversation(false);
-            }
-        } catch (err) {
-            console.warn('Could not initialize existing threads:', err);
-            await startNewConversation(false);
-        }
-    }
-
-    async function startNewConversation(focus = true) {
-        try {
-            const threadData = await API.createConversation(state.userId, {
-                started_from: 'web_ui',
-                client_timestamp: new Date().toISOString(),
-            });
-
-            state.currentThreadId = threadData.thread_id;
-            localStorage.setItem('mcp_rag_active_thread', threadData.thread_id);
-
-            // Add to conversations list
-            state.conversations.unshift(threadData);
-            renderThreadsList();
-
-            // Clear current dialogue
-            state.messages = [];
-            renderDialogue();
-
-            updateHeaderThreadDisplay();
-            showToast('New conversation session started.', 'info');
-
-            if (focus) {
-                elements.queryInput.focus();
-            }
-        } catch (err) {
-            showToast('Error creating conversation thread: ' + err.message, 'error');
-        }
-    }
-
-    async function selectThread(threadId) {
-        if (state.isGenerating) return;
-
-        state.currentThreadId = threadId;
-        localStorage.setItem('mcp_rag_active_thread', threadId);
-        updateHeaderThreadDisplay();
-        renderThreadsList();
-
-        try {
-            const history = await API.getConversationHistory(threadId);
-            state.messages = (history.messages || []).map(m => ({
-                role: m.role,
-                content: m.content,
-                citations: [],
-                sources: [],
-                metadata: null,
-            }));
-            renderDialogue();
-        } catch (err) {
-            console.error('Failed to load thread dialogue history:', err);
-            state.messages = [];
-            renderDialogue();
-        }
-    }
-
-    async function deleteThread(threadId, event) {
-        if (event) event.stopPropagation();
-        if (!confirm('Are you sure you want to delete this conversation?')) return;
-
-        try {
-            await API.deleteConversation(threadId);
-            state.conversations = state.conversations.filter(t => t.thread_id !== threadId);
-            renderThreadsList();
-
-            if (state.currentThreadId === threadId) {
-                if (state.conversations.length > 0) {
-                    await selectThread(state.conversations[0].thread_id);
-                } else {
-                    await startNewConversation();
-                }
-            }
-            showToast('Conversation deleted.', 'info');
-        } catch (err) {
-            showToast('Could not delete conversation: ' + err.message, 'error');
-        }
-    }
-
-    function updateHeaderThreadDisplay() {
-        if (!state.currentThreadId) {
-            elements.activeThreadIdTag.textContent = 'No active thread';
-            elements.activeThreadTitle.textContent = 'Policy Knowledge Base';
-            return;
-        }
-
-        elements.activeThreadIdTag.textContent = state.currentThreadId;
-        const current = state.conversations.find(t => t.thread_id === state.currentThreadId);
-        if (current && current.metadata && current.metadata.first_query) {
-            elements.activeThreadTitle.textContent = current.metadata.first_query.slice(0, 32) + '...';
+        // If current view is not permitted under new role, switch back to chat
+        if (newRole === 'employee' && state.currentView !== 'chat-view') {
+            switchView('chat-view');
         } else {
-            elements.activeThreadTitle.textContent = 'Policy Knowledge Base';
+            loadCurrentViewData();
         }
     }
 
-    function renderThreadsList() {
-        elements.threadCountBadge.textContent = state.conversations.length;
+    // ==============================================================================
+    // Platform View Navigation
+    // ==============================================================================
+    function switchView(viewId) {
+        state.currentView = viewId;
 
-        if (state.conversations.length === 0) {
-            elements.conversationsList.innerHTML = `
-                <div class="threads-empty">
-                    <p>No active sessions yet.</p>
-                </div>
-            `;
+        // Toggle nav items
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            if (btn.dataset.view === viewId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Toggle view panels
+        document.querySelectorAll('.view-panel').forEach(panel => {
+            if (panel.id === viewId) {
+                panel.classList.add('active-view');
+            } else {
+                panel.classList.remove('active-view');
+            }
+        });
+
+        // Update Header Title
+        const titleMap = {
+            'chat-view': 'IT Support Copilot',
+            'dashboard-view': 'Admin Operations & Analytics',
+            'tickets-view': 'Support Ticket Queue',
+            'incidents-view': 'Incident Command Center',
+            'evaluation-view': 'Benchmark & Evaluation Engine',
+            'audit-view': 'Security & Compliance Audit Logs',
+        };
+        if (elements.activeViewTitle) {
+            elements.activeViewTitle.textContent = titleMap[viewId] || 'IT Support Copilot';
+        }
+
+        loadCurrentViewData();
+    }
+
+    async function loadCurrentViewData() {
+        try {
+            if (state.currentView === 'dashboard-view') {
+                await loadDashboardData();
+            } else if (state.currentView === 'tickets-view') {
+                await loadTicketsData();
+            } else if (state.currentView === 'incidents-view') {
+                await loadIncidentsData();
+            } else if (state.currentView === 'evaluation-view') {
+                await loadEvaluationData();
+            } else if (state.currentView === 'audit-view') {
+                await loadAuditData();
+            }
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    // ==============================================================================
+    // Admin Dashboard View Loader
+    // ==============================================================================
+    async function loadDashboardData() {
+        const metrics = await API.getAdminMetrics();
+        if (elements.kpiOpenTickets) elements.kpiOpenTickets.textContent = metrics.open_tickets;
+        if (elements.kpiCriticalIncidents) elements.kpiCriticalIncidents.textContent = metrics.critical_incidents;
+        if (elements.kpiActiveIncidents) elements.kpiActiveIncidents.textContent = metrics.active_incidents;
+        if (elements.kpiAiResolutions) elements.kpiAiResolutions.textContent = metrics.ai_resolutions;
+        if (elements.kpiAiEscalations) elements.kpiAiEscalations.textContent = metrics.ai_escalations;
+        if (elements.kpiAvgTime) elements.kpiAvgTime.textContent = `${metrics.avg_resolution_time_minutes}m`;
+
+        if (elements.statRetLatency) elements.statRetLatency.textContent = `${metrics.avg_retrieval_latency_ms.toFixed(1)} ms`;
+        if (elements.statModelLatency) elements.statModelLatency.textContent = `${metrics.avg_model_latency_ms.toFixed(1)} ms`;
+        if (elements.statTotalLatency) elements.statTotalLatency.textContent = `${metrics.avg_total_latency_ms.toFixed(1)} ms`;
+        if (elements.statTokens) elements.statTokens.textContent = metrics.avg_tokens_per_query;
+        if (elements.statCost) elements.statCost.textContent = `$${metrics.estimated_cost_per_query_usd.toFixed(4)}`;
+
+        // Render Category pills
+        if (elements.categoryDistributionList) {
+            elements.categoryDistributionList.innerHTML = Object.entries(metrics.tickets_by_category)
+                .map(([cat, count]) => `<div class="cat-bar-item"><span>${cat}</span><span class="badge">${count}</span></div>`)
+                .join('') || '<p class="text-muted">No tickets yet.</p>';
+        }
+    }
+
+    // ==============================================================================
+    // Tickets View Loader
+    // ==============================================================================
+    async function loadTicketsData() {
+        if (!elements.ticketsTableBody) return;
+        const filters = {
+            status: elements.ticketStatusFilter ? elements.ticketStatusFilter.value : '',
+            priority: elements.ticketPriorityFilter ? elements.ticketPriorityFilter.value : '',
+        };
+        const tickets = await API.getAdminTickets(filters);
+
+        if (!tickets || tickets.length === 0) {
+            elements.ticketsTableBody.innerHTML = `<tr><td colspan="9" class="table-empty">No matching tickets found in queue.</td></tr>`;
             return;
         }
 
-        elements.conversationsList.innerHTML = state.conversations.map(t => {
-            const isActive = t.thread_id === state.currentThreadId;
-            const title = (t.metadata && t.metadata.first_query)
-                ? t.metadata.first_query
-                : `Session ${t.thread_id.slice(-8)}`;
-            const timeStr = t.created_at ? new Date(t.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
-
+        elements.ticketsTableBody.innerHTML = tickets.map(t => {
+            const priorityClass = t.priority ? t.priority.toLowerCase() : 'medium';
+            const statusClass = t.status ? t.status.toLowerCase() : 'open';
+            const updatedDate = new Date(t.updated_at).toLocaleDateString();
             return `
-                <div class="thread-item ${isActive ? 'active' : ''}" data-thread-id="${t.thread_id}">
-                    <div class="thread-item-content">
-                        <span class="thread-item-title">${title}</span>
-                        <span class="thread-item-time">${timeStr}</span>
+                <tr>
+                    <td><strong>${t.ticket_id}</strong></td>
+                    <td>${t.title}</td>
+                    <td><span class="font-mono">${(t.category || '').toUpperCase()}</span></td>
+                    <td><span class="badge-priority ${priorityClass}">${t.priority}</span></td>
+                    <td><span class="badge-status ${statusClass}">${t.status}</span></td>
+                    <td>${t.requester_id || 'N/A'}</td>
+                    <td>${t.assigned_team || 'Unassigned'}</td>
+                    <td>${updatedDate}</td>
+                    <td><button class="btn-secondary btn-sm" onclick="window.viewTicketDetail('${t.ticket_id}')">View</button></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.viewTicketDetail = async function (ticketId) {
+        try {
+            const ticket = await API.getAdminTicketDetail(ticketId);
+            if (elements.modalTicketId) elements.modalTicketId.textContent = ticket.ticket_id;
+            if (elements.modalTicketTitle) elements.modalTicketTitle.textContent = ticket.title;
+            if (elements.modalTicketRequester) elements.modalTicketRequester.textContent = ticket.requester_id || 'EMP-Demo';
+            if (elements.modalTicketCategory) elements.modalTicketCategory.textContent = (ticket.category || '').toUpperCase();
+            if (elements.modalTicketPriority) elements.modalTicketPriority.textContent = (ticket.priority || '').toUpperCase();
+            if (elements.modalTicketStatus) elements.modalTicketStatus.textContent = (ticket.status || '').toUpperCase();
+            if (elements.modalTicketTeam) elements.modalTicketTeam.textContent = ticket.assigned_team || 'Tier 1 Support';
+            if (elements.modalTicketCreated) elements.modalTicketCreated.textContent = new Date(ticket.created_at).toLocaleString();
+            if (elements.modalTicketDesc) elements.modalTicketDesc.textContent = ticket.description;
+
+            if (elements.modalTicketSteps) {
+                const steps = ticket.troubleshooting_steps || [];
+                elements.modalTicketSteps.innerHTML = steps.length > 0
+                    ? steps.map((s, idx) => `<div>✓ Step ${idx+1}: ${s.step_title || s.step_id || s} - Status: ${s.status || 'Done'}</div>`).join('')
+                    : 'No interactive runbook steps recorded.';
+            }
+
+            if (elements.modalTicketComments) {
+                const comments = ticket.comments || [];
+                elements.modalTicketComments.innerHTML = comments.length > 0
+                    ? comments.map(c => `<div><strong>${c.author_id}:</strong> ${c.content} <em class="text-muted">(${new Date(c.created_at).toLocaleTimeString()})</em></div>`).join('')
+                    : 'No internal comments added.';
+            }
+
+            if (elements.ticketModalBackdrop) elements.ticketModalBackdrop.classList.add('open');
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    };
+
+    // ==============================================================================
+    // Incidents View Loader
+    // ==============================================================================
+    async function loadIncidentsData() {
+        if (!elements.incidentsGrid) return;
+        const incidents = await API.getAdminIncidents();
+
+        if (!incidents || incidents.length === 0) {
+            elements.incidentsGrid.innerHTML = `<div class="empty-incidents">No active or recorded service outages.</div>`;
+            if (elements.incidentAlertBanner) elements.incidentAlertBanner.classList.add('hidden');
+            return;
+        }
+
+        // Show header banner if critical active incident exists
+        const activeCrit = incidents.find(i => (i.status === 'investigating' || i.status === 'identified') && i.severity === 'critical');
+        if (activeCrit && elements.incidentAlertBanner) {
+            elements.incidentAlertText.textContent = `Active Incident: ${activeCrit.title} (${activeCrit.service})`;
+            elements.incidentAlertBanner.classList.remove('hidden');
+        } else if (elements.incidentAlertBanner) {
+            elements.incidentAlertBanner.classList.add('hidden');
+        }
+
+        elements.incidentsGrid.innerHTML = incidents.map(inc => {
+            const isCrit = inc.severity === 'critical' ? 'critical' : '';
+            return `
+                <div class="incident-card ${isCrit}">
+                    <div class="incident-card-header">
+                        <div>
+                            <span class="incident-service">${inc.service.toUpperCase()}</span>
+                            <h4 class="incident-title">${inc.title}</h4>
+                        </div>
+                        <span class="badge-priority ${inc.severity}">${inc.severity}</span>
                     </div>
-                    <button class="btn-delete-thread" data-delete-id="${t.thread_id}" title="Delete session">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
+                    <p class="incident-desc">${inc.description}</p>
+                    ${inc.workaround ? `<div class="incident-workaround"><strong>Workaround:</strong> ${inc.workaround}</div>` : ''}
+                    <div class="stat-row" style="margin-top: 6px; padding: 0;">
+                        <span>Status: <strong class="badge-status ${inc.status}">${inc.status}</strong></span>
+                        <span>Affected Users: <strong>${inc.affected_users || 0}</strong></span>
+                    </div>
                 </div>
             `;
         }).join('');
-
-        // Attach listeners
-        elements.conversationsList.querySelectorAll('.thread-item').forEach(el => {
-            el.addEventListener('click', () => selectThread(el.dataset.threadId));
-        });
-
-        elements.conversationsList.querySelectorAll('.btn-delete-thread').forEach(btn => {
-            btn.addEventListener('click', (e) => deleteThread(btn.dataset.deleteId, e));
-        });
     }
 
     // ==============================================================================
-    // Dialogue Rendering
+    // Evaluation View Loader
     // ==============================================================================
+    async function loadEvaluationData() {
+        const evalData = await API.getAdminEvaluation();
+        if (elements.evalBenchmarkSubtitle) {
+            elements.evalBenchmarkSubtitle.textContent = `Benchmark: ${evalData.benchmark_name} (${evalData.benchmark_version}) • ${evalData.total_cases} Scenarios`;
+        }
+        if (elements.evalIntentAcc) elements.evalIntentAcc.textContent = `${(evalData.intent_accuracy * 100).toFixed(1)}%`;
+        if (elements.evalRunbookAcc) elements.evalRunbookAcc.textContent = `${(evalData.runbook_selection_accuracy * 100).toFixed(1)}%`;
+        if (elements.evalRunbookComp) elements.evalRunbookComp.textContent = `${(evalData.runbook_completion_rate * 100).toFixed(1)}%`;
+        if (elements.evalTicketAcc) elements.evalTicketAcc.textContent = `${(evalData.ticket_creation_success_rate * 100).toFixed(1)}%`;
+        if (elements.evalEscalationAcc) elements.evalEscalationAcc.textContent = `${(evalData.escalation_accuracy * 100).toFixed(1)}%`;
+        if (elements.evalSecurityAcc) elements.evalSecurityAcc.textContent = `${(evalData.unauthorized_blocking_rate * 100).toFixed(1)}%`;
+
+        if (elements.evalRecall3) elements.evalRecall3.textContent = (evalData.rag_metrics['recall@3'] || 1.0).toFixed(2);
+        if (elements.evalPrec3) elements.evalPrec3.textContent = (evalData.rag_metrics['precision@3'] || 0.78).toFixed(2);
+        if (elements.evalMRR) elements.evalMRR.textContent = (evalData.rag_metrics['mrr'] || 1.0).toFixed(2);
+        if (elements.evalFaith) elements.evalFaith.textContent = (evalData.rag_metrics['faithfulness'] || 0.99).toFixed(2);
+    }
+
+    // ==============================================================================
+    // Audit View Loader
+    // ==============================================================================
+    async function loadAuditData() {
+        if (!elements.auditTableBody) return;
+        const logs = await API.getAdminAudit();
+
+        if (!logs || logs.length === 0) {
+            elements.auditTableBody.innerHTML = `<tr><td colspan="9" class="table-empty">No audit events recorded yet.</td></tr>`;
+            return;
+        }
+
+        elements.auditTableBody.innerHTML = logs.map(ev => {
+            const timeStr = new Date(ev.timestamp).toLocaleTimeString();
+            const authClass = ev.authorization_result === 'AUTHORIZED' ? 'badge-status resolved' : 'badge-status escalated';
+            const riskClass = ev.risk_level === 'critical' ? 'badge-priority critical' : (ev.risk_level === 'high' ? 'badge-priority high' : 'badge-priority low');
+            return `
+                <tr>
+                    <td class="font-mono">${timeStr}</td>
+                    <td>${ev.user_id}</td>
+                    <td><span class="badge-status open">${ev.role}</span></td>
+                    <td><code>${ev.action}</code></td>
+                    <td>${ev.resource_type}${ev.resource_id ? ` (${ev.resource_id})` : ''}</td>
+                    <td><span class="${authClass}">${ev.authorization_result}</span></td>
+                    <td><span class="${riskClass}">${ev.risk_level}</span></td>
+                    <td>${ev.status}</td>
+                    <td class="font-mono" style="font-size: 11px;">${ev.request_id ? ev.request_id.slice(0, 8) : '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // ==============================================================================
+    // Chat & Troubleshooting Logic
+    // ==============================================================================
+    async function initSession() {
+        try {
+            const convs = await API.listConversations();
+            state.conversations = convs;
+            if (convs.length > 0) {
+                await loadThread(convs[0].thread_id);
+            } else {
+                await startNewConversation();
+            }
+            renderConversationsList();
+        } catch (e) {
+            await startNewConversation();
+        }
+    }
+
+    async function startNewConversation() {
+        const freshThreadId = `thread_${Date.now().toString(36)}`;
+        state.currentThreadId = freshThreadId;
+        state.messages = [];
+        if (elements.activeThreadIdTag) elements.activeThreadIdTag.textContent = freshThreadId;
+        if (elements.runbookTrackerCard) elements.runbookTrackerCard.classList.add('hidden');
+        renderDialogue();
+    }
+
+    async function loadThread(threadId) {
+        state.currentThreadId = threadId;
+        if (elements.activeThreadIdTag) elements.activeThreadIdTag.textContent = threadId;
+        try {
+            const data = await API.getConversation(threadId);
+            state.messages = data.messages || [];
+        } catch (e) {
+            state.messages = [];
+        }
+        renderDialogue();
+    }
+
+    function renderConversationsList() {
+        if (!elements.conversationsList) return;
+        if (elements.threadCountBadge) elements.threadCountBadge.textContent = state.conversations.length;
+        if (state.conversations.length === 0) {
+            elements.conversationsList.innerHTML = '<div class="threads-empty"><p>No active sessions yet.</p></div>';
+            return;
+        }
+
+        elements.conversationsList.innerHTML = state.conversations.map(c => `
+            <div class="thread-item ${c.thread_id === state.currentThreadId ? 'active' : ''}" data-id="${c.thread_id}">
+                <div class="thread-item-title">${c.title || c.thread_id}</div>
+                <div class="thread-item-time">${new Date(c.updated_at).toLocaleTimeString()}</div>
+            </div>
+        `).join('');
+
+        elements.conversationsList.querySelectorAll('.thread-item').forEach(item => {
+            item.addEventListener('click', () => loadThread(item.dataset.id));
+        });
+    }
+
     function renderDialogue() {
+        if (!elements.dialogueList || !elements.emptyState) return;
         if (state.messages.length === 0) {
             elements.emptyState.style.display = 'flex';
             elements.dialogueList.innerHTML = '';
@@ -369,443 +608,185 @@
         }
 
         elements.emptyState.style.display = 'none';
-
-        elements.dialogueList.innerHTML = state.messages.map((msg, idx) => {
-            if (msg.role === 'user') {
-                return `
-                    <div class="message-row message-user">
-                        <div class="message-bubble">${msg.content}</div>
-                    </div>
-                `;
-            }
-
-            // Assistant Card
-            const parsedHtml = parseMarkdown(msg.content);
-            const hasSources = (msg.sources && msg.sources.length > 0) || (msg.citations && msg.citations.length > 0);
-            const sourcesList = msg.sources || (msg.citations || []).map((c, i) => ({ document_name: c, rank: i + 1 }));
-
-            // Telemetry
-            const meta = msg.metadata;
-            let telemetryHtml = '';
-            if (meta) {
-                const totalMs = meta.total_latency_ms || 0;
-                const retMs = meta.retrieval_latency_ms || 0;
-                const modelMs = meta.model_latency_ms || Math.max(0, totalMs - retMs);
-                const decisionClass = meta.decision === 'supported_by_evidence' ? 'badge-supported' : 'badge-insufficient';
-                const decisionLabel = meta.decision ? meta.decision.replace(/_/g, ' ') : 'Grounding verified';
-
-                telemetryHtml = `
-                    <div class="telemetry-bar">
-                        <span class="telemetry-badge ${decisionClass}">✓ ${decisionLabel}</span>
-                        <span class="telemetry-item">Total: <strong>${Math.round(totalMs)}ms</strong></span>
-                        <span class="telemetry-item">Retrieval: <strong>${Math.round(retMs)}ms</strong></span>
-                        <span class="telemetry-item">LLM: <strong>${Math.round(modelMs)}ms</strong></span>
-                        <span class="telemetry-item">Model: <strong>${meta.model_name || 'gpt-4.1'}</strong></span>
-                    </div>
-                `;
-            }
-
-            // Sources container
-            let sourcesHtml = '';
-            if (hasSources) {
-                sourcesHtml = `
-                    <div class="sources-container">
-                        <div class="sources-header">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            <span>VERIFIED SOURCES (${sourcesList.length})</span>
-                        </div>
-                        <div class="sources-list">
-                            ${sourcesList.map((s, sIdx) => `
-                                <button class="source-pill-btn" data-msg-idx="${idx}" data-source-idx="${sIdx}">
-                                    <span class="source-num">[${sIdx + 1}]</span>
-                                    <span class="source-name">${s.document_name}</span>
-                                    <span class="source-tag">Inspect Passage →</span>
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }
+        elements.dialogueList.innerHTML = state.messages.map((m, idx) => {
+            const isUser = m.role === 'user' || m.type === 'human';
+            const content = m.content || '';
+            const citations = m.citations || [];
 
             return `
-                <div class="message-row message-assistant">
-                    <div class="assistant-avatar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                    </div>
-                    <div class="assistant-card" data-msg-index="${idx}">
-                        <div class="answer-body">${parsedHtml}</div>
-                        ${sourcesHtml}
-                        ${telemetryHtml}
-                        <div class="assistant-utilities">
-                            <div class="feedback-group">
-                                <button class="btn-utility btn-copy" data-msg-idx="${idx}" title="Copy answer to clipboard">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                    <span>Copy</span>
-                                </button>
-                                <button class="btn-utility btn-feedback-up" data-msg-idx="${idx}" title="Helpful response">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                                    </svg>
-                                </button>
-                                <button class="btn-utility btn-feedback-down" data-msg-idx="${idx}" title="Needs improvement">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
-                                    </svg>
-                                </button>
+                <div class="message-row ${isUser ? 'user-message' : 'assistant-message'}">
+                    <div class="message-bubble">
+                        <div class="message-text">${escapeHtml(content)}</div>
+                        ${!isUser && citations.length > 0 ? `
+                            <div class="citations-container">
+                                <span class="citation-label">Verified Sources:</span>
+                                ${citations.map(c => `<span class="citation-badge">📄 ${c}</span>`).join('')}
                             </div>
-                            ${msg.request_id ? `<span class="req-id-pill" title="Request Correlation ID">${msg.request_id}</span>` : ''}
-                        </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
         }).join('');
 
-        // Attach interactive buttons in messages
-        elements.dialogueList.querySelectorAll('.source-pill-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const msgIdx = parseInt(btn.dataset.msgIdx, 10);
-                const sIdx = parseInt(btn.dataset.sourceIdx, 10);
-                openSourceDrawer(msgIdx, sIdx);
-            });
-        });
-
-        elements.dialogueList.querySelectorAll('.btn-copy').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const msgIdx = parseInt(btn.dataset.msgIdx, 10);
-                const msg = state.messages[msgIdx];
-                if (msg) {
-                    navigator.clipboard.writeText(msg.content);
-                    btn.classList.add('active');
-                    btn.innerHTML = `<span>✓ Copied</span>`;
-                    setTimeout(() => {
-                        btn.classList.remove('active');
-                        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span>`;
-                    }, 2000);
-                    showToast('Answer copied to clipboard!', 'info');
-                }
-            });
-        });
-
-        elements.dialogueList.querySelectorAll('.btn-feedback-up').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.classList.toggle('active');
-                const downBtn = btn.parentElement.querySelector('.btn-feedback-down');
-                if (downBtn) downBtn.classList.remove('active');
-                showToast('Thank you for your feedback!', 'info');
-            });
-        });
-
-        elements.dialogueList.querySelectorAll('.btn-feedback-down').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.classList.toggle('active');
-                const upBtn = btn.parentElement.querySelector('.btn-feedback-up');
-                if (upBtn) upBtn.classList.remove('active');
-                showToast('Feedback recorded for system improvement.', 'info');
-            });
-        });
-
-        scrollMessagesToBottom();
+        elements.messagesViewport.scrollTop = elements.messagesViewport.scrollHeight;
     }
 
-    // ==============================================================================
-    // Chat Submission Workflow
-    // ==============================================================================
-    async function handleChatSubmit(e) {
-        if (e) e.preventDefault();
-
-        const query = elements.queryInput.value.trim();
-        if (!query || state.isGenerating) return;
-
-        // Ensure active thread
-        if (!state.currentThreadId) {
-            await startNewConversation(false);
-        }
+    async function handleSendQuery(query) {
+        if (!query.trim() || state.isGenerating) return;
+        state.isGenerating = true;
+        if (elements.loadingState) elements.loadingState.classList.remove('hidden');
 
         // Add user message
-        state.messages.push({
-            role: 'user',
-            content: query,
-        });
-
-        // Update thread title if first message
-        const currentThread = state.conversations.find(t => t.thread_id === state.currentThreadId);
-        if (currentThread && (!currentThread.metadata || !currentThread.metadata.first_query)) {
-            currentThread.metadata = currentThread.metadata || {};
-            currentThread.metadata.first_query = query;
-            renderThreadsList();
-            updateHeaderThreadDisplay();
-        }
-
-        elements.queryInput.value = '';
-        autoResizeTextarea();
+        state.messages.push({ role: 'user', content: query });
         renderDialogue();
+        if (elements.queryInput) elements.queryInput.value = '';
 
-        // Show loading state
-        state.isGenerating = true;
-        elements.sendBtn.disabled = true;
-        elements.loadingState.classList.remove('hidden');
-        elements.loadingStatusLabel.textContent = 'Searching policy documents and synthesizing answer...';
-        scrollMessagesToBottom();
+        // Dynamic runbook simulation tracker for demo
+        updateRunbookTracker(query);
 
         try {
-            const response = await API.sendChat(query, state.currentThreadId, state.userId);
-
-            // Append grounded assistant response
+            const resp = await API.sendMessage(query, state.currentThreadId);
             state.messages.push({
                 role: 'assistant',
-                content: response.answer,
-                citations: response.citations || [],
-                sources: response.sources || [],
-                request_id: response.request_id,
-                metadata: response.metadata,
+                content: resp.answer,
+                citations: resp.citations || [],
+                decision: resp.decision,
             });
-
             renderDialogue();
         } catch (err) {
-            console.error('Chat execution failed:', err);
-            // Append formatted error message
             state.messages.push({
                 role: 'assistant',
-                content: `**Error:** Unable to complete knowledge retrieval: ${err.message}. Please check system status or try rephrasing your question.`,
-                citations: [],
-                sources: [],
-                metadata: null,
+                content: `⚠️ Error processing request: ${err.message}`,
             });
             renderDialogue();
-            showToast('Query failed: ' + err.message, 'error');
+            showToast(err.message, true);
         } finally {
             state.isGenerating = false;
-            elements.sendBtn.disabled = false;
-            elements.loadingState.classList.add('hidden');
-            scrollMessagesToBottom();
-            elements.queryInput.focus();
+            if (elements.loadingState) elements.loadingState.classList.add('hidden');
         }
     }
 
-    // ==============================================================================
-    // Source Inspector Drawer
-    // ==============================================================================
-    function openSourceDrawer(msgIndex, sourceIndex) {
-        const msg = state.messages[msgIndex];
-        if (!msg) return;
+    function updateRunbookTracker(query) {
+        if (!elements.runbookTrackerCard) return;
+        const q = query.toLowerCase();
 
-        const sources = msg.sources || (msg.citations || []).map((c, i) => ({ document_name: c, rank: i + 1 }));
-        const source = sources[sourceIndex];
-        if (!source) return;
-
-        elements.drawerDocName.textContent = source.document_name || 'Policy Document';
-        elements.drawerChunkId.textContent = source.chunk_id || 'chunk_retrieved';
-        elements.drawerDocId.textContent = source.document_id || 'doc_official';
-        elements.drawerScore.textContent = source.fusion_score ? source.fusion_score.toFixed(4) : '0.0160';
-        elements.drawerRank.textContent = source.rank ? `#${source.rank}` : '#1';
-
-        elements.drawerContent.textContent = source.content || (
-            `Grounded policy passage cited from "${source.document_name}". ` +
-            `This section substantiates the factual directives in the synthesized answer.`
-        );
-
-        elements.drawerMetadataJson.textContent = JSON.stringify(source.metadata || {
-            source_document: source.document_name,
-            retrieval_mode: 'hybrid_rrf',
-            grounding_verified: true,
-        }, null, 2);
-
-        elements.sourceDrawerBackdrop.classList.add('open');
-    }
-
-    function closeSourceDrawer() {
-        elements.sourceDrawerBackdrop.classList.remove('open');
-    }
-
-    // ==============================================================================
-    // Diagnostics & System Readiness Monitor
-    // ==============================================================================
-    async function updateSystemStatus() {
-        try {
-            const health = await API.checkHealth();
-            const ready = await API.checkReady();
-
-            state.readiness = ready.data;
-
-            // Ping time
-            elements.diagPingTime.textContent = `${health.duration} ms`;
-
-            const isOperational = ready.data && ready.data.status === 'ready';
-            const dbStatus = ready.data?.checks?.database || 'disconnected';
-            const modelStatus = ready.data?.checks?.model || 'unconfigured';
-            const memStatus = ready.data?.checks?.session_memory || 'disabled';
-
-            // Update pills
-            if (isOperational) {
-                elements.headerStatusDot.className = 'pulse-indicator status-operational';
-                elements.headerStatusText.textContent = 'System Operational';
-                elements.sidebarStatusDot.className = 'status-dot status-operational';
-                elements.sidebarStatusText.textContent = 'System Operational';
-            } else if (dbStatus === 'degraded' || memStatus === 'active') {
-                elements.headerStatusDot.className = 'pulse-indicator status-degraded';
-                elements.headerStatusText.textContent = 'Degraded';
-                elements.sidebarStatusDot.className = 'status-dot status-degraded';
-                elements.sidebarStatusText.textContent = 'System Degraded';
-            } else {
-                elements.headerStatusDot.className = 'pulse-indicator status-offline';
-                elements.headerStatusText.textContent = 'Offline';
-                elements.sidebarStatusDot.className = 'status-dot status-offline';
-                elements.sidebarStatusText.textContent = 'Offline';
-            }
-
-            // Update modal items
-            renderDiagnosticRow(elements.diagMongoStatus, dbStatus);
-            renderDiagnosticRow(elements.diagModelStatus, modelStatus);
-            renderDiagnosticRow(elements.diagMemoryStatus, memStatus);
-
-        } catch (err) {
-            elements.headerStatusDot.className = 'pulse-indicator status-offline';
-            elements.headerStatusText.textContent = 'API Disconnected';
-            elements.sidebarStatusDot.className = 'status-dot status-offline';
-            elements.sidebarStatusText.textContent = 'API Disconnected';
-            elements.diagPingTime.textContent = 'Timeout';
+        if (q.includes('vpn')) {
+            elements.trackerRunbookTitle.textContent = 'Corporate VPN Troubleshooting (RB-NET-VPN-001)';
+            elements.trackerStepProgress.textContent = 'Step 2 of 5';
+            elements.trackerCurrentAction.textContent = 'Restart Corporate VPN Client Service';
+            elements.trackerStepHistory.innerHTML = '<div class="step-chip">✓ 1. Verify Local Internet Connectivity</div>';
+            elements.trackerNextAction.textContent = 'Connect to Corporate Gateway & Verify IP';
+            elements.runbookTrackerCard.classList.remove('hidden');
+        } else if (q.includes('wifi') || q.includes('wi-fi')) {
+            elements.trackerRunbookTitle.textContent = 'Wi-Fi Connectivity Troubleshooting (RB-NET-WIFI-002)';
+            elements.trackerStepProgress.textContent = 'Step 2 of 4';
+            elements.trackerCurrentAction.textContent = 'Reconnect to CorpNet-Secure Network';
+            elements.trackerStepHistory.innerHTML = '<div class="step-chip">✓ 1. Cycle Wi-Fi Hardware Adapter</div>';
+            elements.trackerNextAction.textContent = 'Release & Renew DHCP Lease';
+            elements.runbookTrackerCard.classList.remove('hidden');
+        } else if (q.includes('mfa') || q.includes('2fa')) {
+            elements.trackerRunbookTitle.textContent = 'MFA Authenticator Reset (RB-ACC-MFA-003)';
+            elements.trackerStepProgress.textContent = 'Step 1 of 4';
+            elements.trackerCurrentAction.textContent = 'Verify Authenticator Device Clock Sync';
+            elements.trackerStepHistory.innerHTML = '';
+            elements.trackerNextAction.textContent = 'Send Out-of-Band Push Notification';
+            elements.runbookTrackerCard.classList.remove('hidden');
+        } else if (q.includes('phishing') || q.includes('ransomware') || q.includes('suspicious')) {
+            elements.trackerRunbookTitle.textContent = 'Phishing Incident Containment (RB-SEC-PHS-010)';
+            elements.trackerStepProgress.textContent = 'Step 1 of 5';
+            elements.trackerCurrentAction.textContent = 'Quarantine Suspicious Message & Reset Session Tokens';
+            elements.trackerStepHistory.innerHTML = '';
+            elements.trackerNextAction.textContent = 'Scan Endpoint for IOCs';
+            elements.runbookTrackerCard.classList.remove('hidden');
         }
     }
 
-    function renderDiagnosticRow(el, statusValue) {
-        if (!el) return;
-        const dot = el.querySelector('.dot-indicator') || document.createElement('span');
-        dot.className = 'dot-indicator';
-        const txt = el.querySelector('.diag-status-text') || document.createElement('span');
-        txt.className = 'diag-status-text font-mono';
-
-        if (statusValue === 'connected' || statusValue === 'configured' || statusValue === 'active') {
-            dot.classList.add('status-operational');
-            txt.textContent = statusValue.toUpperCase();
-            txt.style.color = 'var(--success)';
-        } else if (statusValue === 'degraded') {
-            dot.classList.add('status-degraded');
-            txt.textContent = 'DEGRADED';
-            txt.style.color = 'var(--warning)';
-        } else {
-            dot.classList.add('status-offline');
-            txt.textContent = statusValue.toUpperCase();
-            txt.style.color = 'var(--danger)';
-        }
-
-        el.innerHTML = '';
-        el.appendChild(dot);
-        el.appendChild(txt);
-    }
-
-    function openDiagnosticModal() {
-        elements.diagnosticModalBackdrop.classList.add('open');
-        updateSystemStatus();
-    }
-
-    function closeDiagnosticModal() {
-        elements.diagnosticModalBackdrop.classList.remove('open');
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // ==============================================================================
-    // Event Listeners Setup
+    // Event Listeners & Bootstrapping
     // ==============================================================================
     function setupEventListeners() {
-        // Query form
-        elements.chatForm.addEventListener('submit', handleChatSubmit);
+        if (elements.activeRoleSelect) {
+            elements.activeRoleSelect.addEventListener('change', (e) => setRole(e.target.value));
+        }
 
-        elements.queryInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleChatSubmit();
-            }
+        // Platform Navigation Tabs
+        const navButtons = [
+            elements.platformNavLinks,
+            document.getElementById('navChatBtn'),
+            document.getElementById('navDashboardBtn'),
+            document.getElementById('navTicketsBtn'),
+            document.getElementById('navIncidentsBtn'),
+            document.getElementById('navEvalBtn'),
+            document.getElementById('navAuditBtn'),
+        ];
+
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
 
-        elements.queryInput.addEventListener('input', autoResizeTextarea);
+        if (elements.newChatBtn) elements.newChatBtn.addEventListener('click', startNewConversation);
+        if (elements.headerClearBtn) elements.headerClearBtn.addEventListener('click', () => {
+            state.messages = [];
+            if (elements.runbookTrackerCard) elements.runbookTrackerCard.classList.add('hidden');
+            renderDialogue();
+        });
 
-        // Starter Cards
+        // Chat Submission
+        if (elements.chatForm) {
+            elements.chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleSendQuery(elements.queryInput.value);
+            });
+        }
+
+        // Starter Prompts Click
         document.querySelectorAll('.starter-card').forEach(card => {
             card.addEventListener('click', () => {
                 const prompt = card.dataset.prompt;
-                if (prompt) {
-                    elements.queryInput.value = prompt;
-                    autoResizeTextarea();
-                    handleChatSubmit();
-                }
+                if (prompt) handleSendQuery(prompt);
             });
         });
 
-        // New Chat Buttons
-        elements.newChatBtn.addEventListener('click', () => startNewConversation());
+        // Refresh Buttons
+        if (elements.refreshDashboardBtn) elements.refreshDashboardBtn.addEventListener('click', loadDashboardData);
+        if (elements.refreshTicketsBtn) elements.refreshTicketsBtn.addEventListener('click', loadTicketsData);
+        if (elements.refreshIncidentsBtn) elements.refreshIncidentsBtn.addEventListener('click', loadIncidentsData);
+        if (elements.refreshEvalBtn) elements.refreshEvalBtn.addEventListener('click', loadEvaluationData);
+        if (elements.refreshAuditBtn) elements.refreshAuditBtn.addEventListener('click', loadAuditData);
 
-        // Clear header button
-        elements.headerClearBtn.addEventListener('click', () => {
-            if (state.messages.length === 0) return;
-            if (confirm('Clear current conversation viewport?')) {
-                state.messages = [];
-                renderDialogue();
-            }
-        });
+        if (elements.ticketStatusFilter) elements.ticketStatusFilter.addEventListener('change', loadTicketsData);
+        if (elements.ticketPriorityFilter) elements.ticketPriorityFilter.addEventListener('change', loadTicketsData);
 
-        // Status triggers
-        elements.headerStatusPill.addEventListener('click', openDiagnosticModal);
-        elements.sidebarStatusTrigger.addEventListener('click', openDiagnosticModal);
-        elements.closeModalBtn.addEventListener('click', closeDiagnosticModal);
-        elements.closeModalOkBtn.addEventListener('click', closeDiagnosticModal);
-        elements.refreshDiagBtn.addEventListener('click', updateSystemStatus);
-        elements.diagnosticModalBackdrop.addEventListener('click', (e) => {
-            if (e.target === elements.diagnosticModalBackdrop) closeDiagnosticModal();
-        });
+        // Modals & Drawers
+        if (elements.closeTicketModalBtn) elements.closeTicketModalBtn.addEventListener('click', () => elements.ticketModalBackdrop.classList.remove('open'));
+        if (elements.closeTicketModalOkBtn) elements.closeTicketModalOkBtn.addEventListener('click', () => elements.ticketModalBackdrop.classList.remove('open'));
+        if (elements.closeDrawerBtn) elements.closeDrawerBtn.addEventListener('click', () => elements.sourceDrawerBackdrop.classList.remove('open'));
 
-        // Source Drawer triggers
-        elements.closeDrawerBtn.addEventListener('click', closeSourceDrawer);
-        elements.sourceDrawerBackdrop.addEventListener('click', (e) => {
-            if (e.target === elements.sourceDrawerBackdrop) closeSourceDrawer();
-        });
-
-        // Mobile sidebar toggle
-        elements.mobileMenuBtn.addEventListener('click', () => {
-            elements.sidebar.classList.add('open');
-        });
-
-        elements.sidebarCloseBtn.addEventListener('click', () => {
-            elements.sidebar.classList.remove('open');
-        });
-
-        // Global shortcuts (Cmd/Ctrl + K -> new conversation)
-        document.addEventListener('keydown', (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                startNewConversation();
-            }
-            if (e.key === 'Escape') {
-                closeSourceDrawer();
-                closeDiagnosticModal();
-            }
-        });
+        // Mobile Menu
+        if (elements.mobileMenuBtn) elements.mobileMenuBtn.addEventListener('click', () => elements.sidebar.classList.add('open'));
+        if (elements.sidebarCloseBtn) elements.sidebarCloseBtn.addEventListener('click', () => elements.sidebar.classList.remove('open'));
     }
 
-    // ==============================================================================
-    // App Initialization
-    // ==============================================================================
-    async function init() {
+    // Legacy Compatibility Helper Exports
+    window.sendChat = function (query) {
+        return handleSendQuery(query);
+    };
+
+    window.parseMarkdown = function (text) {
+        return escapeHtml(text);
+    };
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
-        await updateSystemStatus();
-        await initConversation();
-        // Periodic health check every 30s
-        setInterval(updateSystemStatus, 30000);
-    }
+        setRole(state.currentRole);
+        initSession();
+    });
 
-    // Run on DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
 })();

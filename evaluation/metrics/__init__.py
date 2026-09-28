@@ -28,6 +28,11 @@ from evaluation.metrics.retrieval import (
     normalize_doc_name,
 )
 
+from evaluation.metrics.it_metrics import (
+    ITMetricResult,
+    compute_it_metrics,
+)
+
 __all__ = [
     # Legacy & RAGAS
     "RAGASEvaluator",
@@ -52,4 +57,7 @@ __all__ = [
     "estimate_tokens",
     "compute_cost_usd",
     "extract_operational_metrics",
+    # IT Support
+    "ITMetricResult",
+    "compute_it_metrics",
 ]

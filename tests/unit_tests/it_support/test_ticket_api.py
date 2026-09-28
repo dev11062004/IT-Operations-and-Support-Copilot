@@ -53,7 +53,9 @@ class MemoryTicketStore:
 
 
 def _build_test_client(ff_enabled: bool = True):
-    app = create_app(cfg=Config(ff_it_support=ff_enabled), runner=MagicMock(checkpointer=None))
+    app = create_app(
+        cfg=Config(ff_it_support=ff_enabled), runner=MagicMock(checkpointer=None)
+    )
     store = MemoryTicketStore()
     service = ITTicketAPIService(TicketService(store))
     app.dependency_overrides[get_it_ticket_service] = lambda: service
@@ -63,7 +65,12 @@ def _build_test_client(ff_enabled: bool = True):
 def test_ticket_routes_lifecycle_and_validation() -> None:
     client, _ = _build_test_client(ff_enabled=True)
     with client:
-        payload = {"title": "VPN Outage", "description": "Cannot connect to VPN", "category": "vpn", "requester_id": "user-1"}
+        payload = {
+            "title": "VPN Outage",
+            "description": "Cannot connect to VPN",
+            "category": "vpn",
+            "requester_id": "user-1",
+        }
         created = client.post("/api/v1/it/tickets", json=payload)
         assert created.status_code == 201
         data = created.json()
@@ -97,7 +104,9 @@ def test_ticket_routes_lifecycle_and_validation() -> None:
         assert patched_data["priority"] == "high"
 
         # Invalid PATCH transition: open -> closed directly is rejected by lifecycle
-        invalid_patch = client.patch(f"/api/v1/it/tickets/{ticket_id}", json={"status": "closed"})
+        invalid_patch = client.patch(
+            f"/api/v1/it/tickets/{ticket_id}", json={"status": "closed"}
+        )
         assert invalid_patch.status_code == 422
         assert "Cannot transition ticket" in invalid_patch.json()["message"]
 
@@ -105,21 +114,35 @@ def test_ticket_routes_lifecycle_and_validation() -> None:
         get_nonexistent = client.get("/api/v1/it/tickets/TKT-NONEXISTENT")
         assert get_nonexistent.status_code == 404
         assert "not found" in get_nonexistent.json()["message"]
-        patch_nonexistent = client.patch("/api/v1/it/tickets/TKT-NONEXISTENT", json={"status": "open"})
+        patch_nonexistent = client.patch(
+            "/api/v1/it/tickets/TKT-NONEXISTENT", json={"status": "open"}
+        )
         assert patch_nonexistent.status_code == 404
         assert "not found" in patch_nonexistent.json()["message"]
 
         # Schema validation error on missing required fields returns 422
-        assert client.post("/api/v1/it/tickets", json={"title": "missing"}).status_code == 422
+        assert (
+            client.post("/api/v1/it/tickets", json={"title": "missing"}).status_code
+            == 422
+        )
 
 
 def test_ticket_routes_disabled_when_feature_flag_off() -> None:
     client, _ = _build_test_client(ff_enabled=False)
     with client:
-        payload = {"title": "VPN", "description": "Cannot connect", "category": "vpn", "requester_id": "user-1"}
+        payload = {
+            "title": "VPN",
+            "description": "Cannot connect",
+            "category": "vpn",
+            "requester_id": "user-1",
+        }
         post_res = client.post("/api/v1/it/tickets", json=payload)
         assert post_res.status_code == 404
         assert "IT support capability is disabled" in post_res.json()["message"]
         assert client.get("/api/v1/it/tickets/TKT-123").status_code == 404
-        assert client.patch("/api/v1/it/tickets/TKT-123", json={"status": "open"}).status_code == 404
-
+        assert (
+            client.patch(
+                "/api/v1/it/tickets/TKT-123", json={"status": "open"}
+            ).status_code
+            == 404
+        )

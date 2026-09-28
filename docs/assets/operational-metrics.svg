@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 296" width="100%" height="100%">
+    <style>
+        @media (prefers-color-scheme: dark) {
+            .bg-card { fill: #0f172a !important; stroke: #334155 !important; }
+            .title-text { fill: #f8fafc !important; }
+            .subtitle-text { fill: #94a3b8 !important; }
+            .label-text { fill: #e2e8f0 !important; }
+            .bar-track { fill: #1e293b !important; }
+            .val-text { fill: #38bdf8 !important; }
+            .badge-bg { fill: #1e293b !important; stroke: #38bdf8 !important; }
+            .badge-text { fill: #38bdf8 !important; }
+        }
+    </style>
+    <!-- Background Card -->
+    <rect x="2" y="2" width="746" height="292" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" class="bg-card" />
+    
+    <!-- Title & Header -->
+    <text x="40" y="48" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="800" fill="#0f172a" class="title-text">Operational Latency & System Responsiveness</text>
+    <text x="40" y="74" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#64748b" class="subtitle-text">End-to-end execution latency per query (SLA threshold: 5,000 ms)</text>
+    
+    <!-- Benchmark Verified Badge -->
+    <rect x="550" y="32" width="160" height="28" rx="6" fill="#eff6ff" stroke="#6366f1" stroke-width="1" class="badge-bg" />
+    <text x="630" y="50" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#4f46e5" text-anchor="middle" class="badge-text">✓ REAL BENCHMARK</text>
+    
+    <!-- Divider -->
+    <line x1="40" y1="92" x2="710" y2="92" stroke="#e2e8f0" stroke-width="1" class="bar-track" />
+    
+    <!-- Bars -->
+    
+        <!-- Row 0: Retrieval Latency -->
+        <g class="bar-row">
+            <text x="40" y="138" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#1e293b" class="label-text">Retrieval Latency</text>
+            <!-- Background Track -->
+            <rect x="250" y="120" width="380" height="26" rx="6" fill="#f1f5f9" class="bar-track" />
+            <!-- Active Fill -->
+            <defs>
+                <linearGradient id="grad_bar_0" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.85" />
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="1.0" />
+                </linearGradient>
+            </defs>
+            <rect x="250" y="120" width="28" height="26" rx="6" fill="url(#grad_bar_0)" />
+            <!-- Value Text -->
+            <text x="292" y="138" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#0f172a" class="val-text">15.2 ms</text>
+        </g>
+        
+        <!-- Row 1: Model / Generation Latency -->
+        <g class="bar-row">
+            <text x="40" y="190" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#1e293b" class="label-text">Model / Generation Latency</text>
+            <!-- Background Track -->
+            <rect x="250" y="172" width="380" height="26" rx="6" fill="#f1f5f9" class="bar-track" />
+            <!-- Active Fill -->
+            <defs>
+                <linearGradient id="grad_bar_1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.85" />
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="1.0" />
+                </linearGradient>
+            </defs>
+            <rect x="250" y="172" width="228" height="26" rx="6" fill="url(#grad_bar_1)" />
+            <!-- Value Text -->
+            <text x="492" y="190" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#0f172a" class="val-text">120.5 ms</text>
+        </g>
+        
+        <!-- Row 2: Total Turnaround Latency -->
+        <g class="bar-row">
+            <text x="40" y="242" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#1e293b" class="label-text">Total Turnaround Latency</text>
+            <!-- Background Track -->
+            <rect x="250" y="224" width="380" height="26" rx="6" fill="#f1f5f9" class="bar-track" />
+            <!-- Active Fill -->
+            <defs>
+                <linearGradient id="grad_bar_2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.85" />
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="1.0" />
+                </linearGradient>
+            </defs>
+            <rect x="250" y="224" width="257" height="26" rx="6" fill="url(#grad_bar_2)" />
+            <!-- Value Text -->
+            <text x="521" y="242" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#0f172a" class="val-text">135.7 ms</text>
+        </g>
+        
+</svg>

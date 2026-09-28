@@ -18,7 +18,12 @@ from mcp_rag_agent.api.schemas.health import (
     ReadinessDetails,
     ReadinessResponse,
 )
-from mcp_rag_agent.api.schemas.it_tickets import TicketCreate, TicketOperationResult, TicketPatch, TicketRecord
+from mcp_rag_agent.api.schemas.it_tickets import (
+    TicketCreate,
+    TicketOperationResult,
+    TicketPatch,
+    TicketRecord,
+)
 
 __all__ = [
     "ChatRequest",

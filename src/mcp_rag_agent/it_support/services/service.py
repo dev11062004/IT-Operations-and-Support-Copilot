@@ -70,7 +70,11 @@ class ServiceStatusChecker:
         Raises:
             ValueError: If service_name is empty or invalid.
         """
-        if not service_name or not isinstance(service_name, str) or not service_name.strip():
+        if (
+            not service_name
+            or not isinstance(service_name, str)
+            or not service_name.strip()
+        ):
             raise ValueError("service_name must be a non-empty string")
 
         canonical_name = normalize_service_name(service_name)

@@ -9,13 +9,16 @@ from mcp_rag_agent.mongodb import MongoDBClient
 
 class UserNotFoundError(KeyError):
     """Raised when a requested user cannot be found."""
+
     pass
 
 
 class UserStore:
     """Persistence store for enterprise user context in MongoDB."""
 
-    def __init__(self, mongo_client: MongoDBClient, collection_name: str = "it_users") -> None:
+    def __init__(
+        self, mongo_client: MongoDBClient, collection_name: str = "it_users"
+    ) -> None:
         self._mongo_client = mongo_client
         self._collection_name = collection_name
 
@@ -47,8 +50,13 @@ class UserStore:
         doc = self._collection.find_one({"user_id": user_id})
         return self._to_record(doc)
 
-    def list(self, filters: dict[str, Any] | None = None, limit: int = 100) -> list[UserContextRecord]:
-        return [self._to_record(item) for item in self._collection.find(filters or {}).limit(limit)]
+    def list(
+        self, filters: dict[str, Any] | None = None, limit: int = 100
+    ) -> list[UserContextRecord]:
+        return [
+            self._to_record(item)
+            for item in self._collection.find(filters or {}).limit(limit)
+        ]
 
     def update_fields(self, user_id: str, fields: dict[str, Any]) -> UserContextRecord:
         payload = {**fields, "updated_at": datetime.now(timezone.utc).isoformat()}

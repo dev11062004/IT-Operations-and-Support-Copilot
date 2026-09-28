@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 340" width="100%" height="100%">
+    <style>
+        .box { rx: 8; stroke-width: 1.5; }
+        .title { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 700; }
+        .subtitle { font-family: system-ui, -apple-system, sans-serif; font-size: 11px; font-weight: 400; }
+        @media (prefers-color-scheme: dark) {
+            .bg { fill: #0b0f19; }
+            .node-role { fill: #1e1b4b; stroke: #6366f1; }
+            .node-perm { fill: #172554; stroke: #3b82f6; }
+            .node-res { fill: #0f2e2e; stroke: #14b8a6; }
+            .node-risk { fill: #431407; stroke: #f97316; }
+            .node-hitl { fill: #450a0a; stroke: #ef4444; }
+            .node-exec { fill: #064e3b; stroke: #10b981; }
+            .node-audit { fill: #1e293b; stroke: #64748b; }
+            .text-main { fill: #f9fafb; }
+            .text-sub { fill: #9ca3af; }
+            .arrow-line { stroke: #6b7280; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        }
+        @media (prefers-color-scheme: light) {
+            .bg { fill: #f8fafc; }
+            .node-role { fill: #eef2ff; stroke: #4f46e5; }
+            .node-perm { fill: #eff6ff; stroke: #2563eb; }
+            .node-res { fill: #f0fdfa; stroke: #0d9488; }
+            .node-risk { fill: #fff7ed; stroke: #ea580c; }
+            .node-hitl { fill: #fef2f2; stroke: #dc2626; }
+            .node-exec { fill: #ecfdf5; stroke: #059669; }
+            .node-audit { fill: #f1f5f9; stroke: #64748b; }
+            .text-main { fill: #0f172a; }
+            .text-sub { fill: #475569; }
+            .arrow-line { stroke: #94a3b8; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        }
+    </style>
+    <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#64748b" />
+        </marker>
+    </defs>
+    <rect width="880" height="340" class="bg" rx="12" />
+
+    <text x="30" y="36" font-family="system-ui, sans-serif" font-size="18" font-weight="800" class="text-main">Enterprise RBAC, Authorization &amp; Human-in-the-Loop (HITL)</text>
+    <text x="30" y="56" font-family="system-ui, sans-serif" font-size="12" font-weight="500" class="text-sub">Zero Trust multi-tier security pipeline: Role Matrix → Resource Isolation → Risk Tiering → HITL Approval → Sanitized Audit</text>
+
+    <!-- Node 1: Role Identity -->
+    <rect x="30" y="120" width="120" height="80" class="node-role box" />
+    <text x="90" y="150" text-anchor="middle" class="title text-main">1. Role</text>
+    <text x="90" y="170" text-anchor="middle" class="subtitle text-sub">5 Enterprise Roles</text>
+    <text x="90" y="186" text-anchor="middle" class="subtitle text-sub">Least Privilege</text>
+
+    <!-- Arrow 1->2 -->
+    <line x1="150" y1="160" x2="185" y2="160" class="arrow-line" />
+
+    <!-- Node 2: Permission Matrix -->
+    <rect x="190" y="120" width="130" height="80" class="node-perm box" />
+    <text x="255" y="150" text-anchor="middle" class="title text-main">2. Permissions</text>
+    <text x="255" y="170" text-anchor="middle" class="subtitle text-sub">17 Granular Perms</text>
+    <text x="255" y="186" text-anchor="middle" class="subtitle text-sub">Fast Deny</text>
+
+    <!-- Arrow 2->3 -->
+    <line x1="320" y1="160" x2="355" y2="160" class="arrow-line" />
+
+    <!-- Node 3: Resource Scoping -->
+    <rect x="360" y="120" width="140" height="80" class="node-res box" />
+    <text x="430" y="150" text-anchor="middle" class="title text-main">3. Resource Scope</text>
+    <text x="430" y="170" text-anchor="middle" class="subtitle text-sub">User/Device Privacy</text>
+    <text x="430" y="186" text-anchor="middle" class="subtitle text-sub">Doc Pre-Retrieval</text>
+
+    <!-- Arrow 3->4 -->
+    <line x1="500" y1="160" x2="535" y2="160" class="arrow-line" />
+
+    <!-- Node 4: Risk Tiering -->
+    <rect x="540" y="120" width="130" height="80" class="node-risk box" />
+    <text x="605" y="150" text-anchor="middle" class="title text-main">4. Risk Policy</text>
+    <text x="605" y="170" text-anchor="middle" class="subtitle text-sub">Low • Medium</text>
+    <text x="605" y="186" text-anchor="middle" class="subtitle text-sub">High • Critical</text>
+
+    <!-- Split Arrows 4 -> HITL or Auto -->
+    <path d="M 670 140 L 715 110" class="arrow-line" />
+    <path d="M 670 180 L 715 210" class="arrow-line" />
+
+    <!-- Node 5A: HITL Approval -->
+    <rect x="720" y="70" width="130" height="75" class="node-hitl box" />
+    <text x="785" y="100" text-anchor="middle" class="title text-main">5A. HITL Approval</text>
+    <text x="785" y="118" text-anchor="middle" class="subtitle text-sub">Admin Gate</text>
+    <text x="785" y="132" text-anchor="middle" class="subtitle text-sub">Separation of Duties</text>
+
+    <!-- Node 5B: Direct Exec -->
+    <rect x="720" y="175" width="130" height="75" class="node-exec box" />
+    <text x="785" y="205" text-anchor="middle" class="title text-main">5B. Safe Exec</text>
+    <text x="785" y="223" text-anchor="middle" class="subtitle text-sub">Automated Tool</text>
+    <text x="785" y="237" text-anchor="middle" class="subtitle text-sub">Low/Medium Risk</text>
+
+    <!-- Down to Audit -->
+    <path d="M 785 250 L 785 275 L 430 275 L 430 250" class="arrow-line" />
+    <rect x="330" y="235" width="200" height="45" class="node-audit box" />
+    <text x="430" y="258" text-anchor="middle" class="title text-main">6. Sanitized Audit Logging</text>
+    <text x="430" y="272" text-anchor="middle" class="subtitle text-sub">0 Secret / Credential Leaks</text>
+</svg>

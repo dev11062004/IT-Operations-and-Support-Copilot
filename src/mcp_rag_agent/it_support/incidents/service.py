@@ -1,6 +1,10 @@
 """Incident use cases, including deterministic known-incident detection."""
 
-from mcp_rag_agent.it_support.incidents.models import IncidentCreate, IncidentMatchCriteria, IncidentRecord
+from mcp_rag_agent.it_support.incidents.models import (
+    IncidentCreate,
+    IncidentMatchCriteria,
+    IncidentRecord,
+)
 from mcp_rag_agent.it_support.incidents.store import IncidentStore
 from mcp_rag_agent.it_support.models import IncidentStatus
 
@@ -21,7 +25,12 @@ class IncidentService:
     def list_active_incidents(self) -> list[IncidentRecord]:
         return self._store.list_active()
 
-    def find_known_incident(self, criteria: IncidentMatchCriteria) -> IncidentRecord | None:
+    def list_all_incidents(self, limit: int = 100) -> list[IncidentRecord]:
+        return self._store.list_all(limit=limit)
+
+    def find_known_incident(
+        self, criteria: IncidentMatchCriteria
+    ) -> IncidentRecord | None:
         """Match active incidents on service plus exact structured incident signals."""
         for incident in self._store.find_matching(criteria):
             if incident.service.casefold() != criteria.service.casefold():

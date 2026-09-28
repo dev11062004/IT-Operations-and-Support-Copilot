@@ -101,7 +101,11 @@ async def create_rag_agent_instance(
 
     runbook_executor = None
     if active_config.ff_it_support:
-        from mcp_rag_agent.it_support.runbooks import RunbookExecutor, create_runbook_tool
+        from mcp_rag_agent.it_support.runbooks import (
+            RunbookExecutor,
+            create_runbook_tool,
+        )
+
         runbook_executor = RunbookExecutor(checkpointer=active_checkpointer)
 
     if active_config.ff_mcp_server:
@@ -116,6 +120,7 @@ async def create_rag_agent_instance(
         tools = [create_search_documents_tool()]
         if active_config.ff_it_support:
             from mcp_rag_agent.it_support.tools import create_it_operations_tools
+
             tools.extend(create_it_operations_tools())
         if runbook_executor is not None:
             tools.append(create_runbook_tool(runbook_executor))
@@ -133,7 +138,6 @@ async def create_rag_agent_instance(
         checkpointer=active_checkpointer,
         runbook_executor=runbook_executor,
     )
-
 
 
 # -------------------------------------------------------------------

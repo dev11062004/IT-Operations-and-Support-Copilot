@@ -1,6 +1,13 @@
 """Ticket use cases, including duplicate detection and lifecycle enforcement."""
 
-from mcp_rag_agent.it_support.tickets.models import ALLOWED_TRANSITIONS, TicketComment, TicketCreate, TicketLifecycleStatus, TicketOperationResult, TicketRecord
+from mcp_rag_agent.it_support.tickets.models import (
+    ALLOWED_TRANSITIONS,
+    TicketComment,
+    TicketCreate,
+    TicketLifecycleStatus,
+    TicketOperationResult,
+    TicketRecord,
+)
 from mcp_rag_agent.it_support.tickets.store import TicketStore
 
 
@@ -16,7 +23,9 @@ class TicketService:
         candidate = TicketRecord(**request.model_dump())
         duplicate = self._store.find_unresolved_duplicate(candidate)
         if duplicate:
-            return TicketOperationResult(ticket=duplicate, created=False, duplicate=True)
+            return TicketOperationResult(
+                ticket=duplicate, created=False, duplicate=True
+            )
         return TicketOperationResult(ticket=self._store.create(candidate), created=True)
 
     def get_ticket(self, ticket_id: str) -> TicketRecord:
@@ -25,10 +34,14 @@ class TicketService:
     def list_tickets(self, filters: dict | None = None) -> list[TicketRecord]:
         return self._store.list(filters)
 
-    def transition_status(self, ticket_id: str, target: TicketLifecycleStatus) -> TicketRecord:
+    def transition_status(
+        self, ticket_id: str, target: TicketLifecycleStatus
+    ) -> TicketRecord:
         current = self._store.get(ticket_id)
         if target not in ALLOWED_TRANSITIONS[current.status]:
-            raise InvalidTicketTransitionError(f"Cannot transition ticket from {current.status.value} to {target.value}.")
+            raise InvalidTicketTransitionError(
+                f"Cannot transition ticket from {current.status.value} to {target.value}."
+            )
         return self._store.update_fields(ticket_id, {"status": target.value})
 
     def assign_team(self, ticket_id: str, team: str | None) -> TicketRecord:

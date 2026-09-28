@@ -22,8 +22,11 @@ from mcp_rag_agent.mcp_server.tools import (
 )
 
 
-def _make_sync_runner(async_fn: Callable[..., Coroutine[Any, Any, str]]) -> Callable[..., str]:
+def _make_sync_runner(
+    async_fn: Callable[..., Coroutine[Any, Any, str]],
+) -> Callable[..., str]:
     """Helper to run async coroutines safely from sync tool callers."""
+
     def _sync_wrapper(*args: Any, **kwargs: Any) -> str:
         try:
             loop = asyncio.get_running_loop()
@@ -34,6 +37,7 @@ def _make_sync_runner(async_fn: Callable[..., Coroutine[Any, Any, str]]) -> Call
                 future = executor.submit(asyncio.run, async_fn(*args, **kwargs))
                 return future.result()
         return asyncio.run(async_fn(*args, **kwargs))
+
     return _sync_wrapper
 
 

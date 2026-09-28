@@ -1,598 +1,667 @@
-# MCP RAG Agent
+# IT Operations & Support Copilot
 
-[![CI Pipeline](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/ci.yml)
-[![Integration Tests](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/integration.yml/badge.svg)](https://github.com/luisrodriguesphd/mcp-rag-agent/actions/workflows/integration.yml)
+> **An enterprise-grade, agentic IT operations and support platform combining hybrid RAG (Dense Vector + Lexical BM25 with RRF), LangGraph orchestrations, stateful deterministic troubleshooting runbooks, Model Context Protocol (MCP) operations, zero-trust RBAC with human-in-the-loop approvals, and automated RAGAS evaluation.**
+
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
-
-Production-ready RAG system combining LangGraph agent with Model Context Protocol (MCP) integration. Features hybrid search using Reciprocal Rank Fusion (RRF) via MongoDB vector and full-text searches, grounded responses using COSTAR prompting, and automated RAGAS-based evaluation for building reliable, context-aware AI agents.
-
-## Overview
-
-The MCP RAG Agent is a sophisticated question-answering system that:
-- Uses hybrid search to find relevant documents from a policy corpus
-- Employs a LangGraph agent to reason about and retrieve information
-- Integrates via the Model Context Protocol (MCP) for modular, reusable components
-- Ensures grounded responses using the COSTAR prompting framework
-- Stores and retrieves documents using MongoDB Atlas Vector Search
-- Provides comprehensive evaluation tools using RAGAS metrics
-
-## Key Features
-
-- **MCP Integration**: Standardized protocol for tool exposure and agent communication
-- **Hybrid Search**: Combines vector similarity and keyword search using Reciprocal Rank Fusion (RRF)
-- **Semantic Search**: Vector-based document retrieval using OpenAI embeddings
-- **Text Search**: Full-text keyword search with stemming and relevance scoring
-- **MongoDB Atlas**: Scalable vector storage with efficient similarity search
-- **Grounded Responses**: Strict context-based answering with no hallucinations
-- **COSTAR Prompting**: Structured prompt design for consistent, high-quality outputs
-- **LangGraph Agent**: Reasoning and acting cycles for intelligent tool usage
-- **Persistent Conversation Memory**: Multi-turn dialogue continuity backed by MongoDB Atlas checkpoints (`MongoDBSaver`), surviving process restarts with strict thread isolation and graceful fallback during database outages
-- **Automated Evaluation**: RAGAS-based metrics for answer quality assessment
-
-
-## Architecture
-
-![Architecture Diagram](docs/[2025-11-30]Case-MCP-RAG-Agent-Architecture.drawio.png)
-
-The system architecture diagram illustrates two main workflows:
-
-1. **Document Indexing Flow** (Setup Phase): Documents are processed, embedded using OpenAI, and stored in MongoDB Atlas Vector Search with appropriate indexing for efficient retrieval.
-
-2. **Question-Answering Flow** (Runtime): User queries trigger the LangGraph ReAct agent, which uses MCP tools to search relevant documents via semantic search, then formulates grounded responses based on retrieved context.
-
-Additionally, the system includes a third workflow not shown in the diagram:
-
-3. **Evaluation Flow** (Quality Assurance): The system generates answers for predefined test questions and evaluates them using RAGAS metrics (relevancy, similarity, correctness) to ensure response quality and accuracy.
-
-## Project Structure
-
-```
-mcp-rag-agent/
-├── data/
-│   ├── ingested_documents/         # Source documents (policies)
-│   │   └── policies/
-│   │       ├── 1 - Remote Working.txt
-│   │       ├── 2 - Expenses.txt
-│   │       ├── 3 - Annual Leave.txt
-│   │       ├── 4 - IT Security.txt
-│   │       └── 5 - Sustainability.txt
-│   └── evaluation_documents/       # Test cases for evaluation
-│       └── expected_behaviour.xlsx
-├── evaluation/                     # Automated testing and metrics
-│   ├── main.py                     # Main evaluation orchestration script
-│   ├── answer_generator.py         # Generates answers using the agent
-│   ├── metrics_evaluator.py        # Evaluates answers using RAGAS metrics
-│   ├── metrics.py                  # RAGAS metrics wrapper and definitions
-│   ├── results/                    # Evaluation output (CSV files)
-│   └── README.md                   # Evaluation module documentation
-├── src/mcp_rag_agent/
-│   ├── agent/                      # LangChain agent implementation
-│   │   ├── create_agent.py         # Agent creation and configuration
-│   │   ├── prompts/                # COSTAR-based system prompts
-│   │   │   ├── __init__.py         # Prompts module exports
-│   │   │   └── system_prompt.py    # System prompt definitions
-│   │   ├── utils/                  # Agent utility functions
-│   │   │   ├── mcp_rag_agent_creator.py  # MCP-enabled agent factory
-│   │   │   └── rag_agent_creator.py      # Base RAG agent factory
-│   │   └── README.md               # Agent module documentation
-│   ├── embeddings/                 # Document processing and indexing
-│   │   ├── embedding_generator.py  # OpenAI embeddings generation
-│   │   ├── index_documents.py      # Document indexing pipeline
-│   │   ├── semantic_search.py      # Vector similarity search
-│   │   ├── hybrid_search.py        # Hybrid search combining vector + text
-│   │   └── README.md               # Embeddings module documentation
-│   ├── mcp_server/                 # MCP server implementation
-│   │   ├── server.py               # FastMCP server with tools
-│   │   ├── tools.py                # MCP tool implementations
-│   │   └── README.md               # MCP server documentation
-│   ├── mongodb/                    # Database client
-│   │   ├── client.py               # MongoDB wrapper with vector search
-│   │   └── README.md               # MongoDB module documentation
-│   └── core/                       # Configuration and utilities
-│       ├── checkpointer.py         # MongoDB & memory checkpointer factory
-│       ├── config.py               # Environment-based configuration
-│       └── log_setup.py            # Logging configuration
-├── .dockerignore                   # Docker build ignore patterns
-├── Dockerfile                      # Multi-stage production container image
-├── Dockerfile.frontend             # Standalone Nginx frontend container image
-├── docker-compose.yml              # Microservice orchestration (api, frontend, mongodb, mcp)
-├── docker/
-│   └── nginx/                      # Unprivileged Nginx configuration & reverse proxy
-│       └── nginx.conf
-├── docs/
-│   ├── DEPLOYMENT.md               # Production deployment & operations guide
-│   └── DEBUGGING_GUIDE.md          # Runtime troubleshooting guide
-├── tests/                          # Tests
-│   └── unit_tests                  # Unit tests
-├── .env.example                    # Example environment configuration
-├── .gitignore                      # Git ignore patterns
-├── requirements.txt                # Production dependencies
-├── requirements_dev.txt            # Development dependencies
-├── setup.py                        # Package installation configuration
-├── start.cmd                       # Windows startup script
-└── README.md                       # This file
-```
-
-## Production Deployment (Docker & Compose)
-
-The application can be deployed on a clean machine using Docker Compose with zero local Python or database installation requirements.
-
-### Clean Machine Quickstart
-
-1. **Configure environment**:
-```bash
-cp .env.example .env
-# Edit .env with your OPENAI_API_KEY
-```
-
-2. **Build and launch the stack**:
-```bash
-docker compose build
-docker compose up -d
-```
-
-This starts:
-- **`api`** on `http://localhost:8000` (FastAPI backend + LangGraph agent)
-- **`frontend`** on `http://localhost:3000` (Nginx static UI & reverse proxy)
-- **`mongodb`** on `localhost:27017` (Document database & vector search)
-
-3. **(Optional) Run with standalone MCP server**:
-```bash
-docker compose --profile mcp up -d
-```
-Starts **`mcp-server`** on `http://localhost:8001/sse`.
-
-### Verifying the Deployment
-
-```bash
-# 1. Check container health status
-docker compose ps
-
-# 2. Check API liveness
-curl http://localhost:8000/api/v1/health
-
-# 3. Check readiness & MongoDB connectivity
-curl http://localhost:8000/api/v1/ready
-
-# 4. Check Frontend Web UI
-curl http://localhost:3000/healthz
-# Open http://localhost:3000 in your browser
-
-# 5. Execute conversational chat request
-curl -X POST http://localhost:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is the policy on annual leave in the UK?"}'
-```
-
-For full production architecture, hardening, and operation instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+[![Tests: 340 Passed](https://img.shields.io/badge/tests-340%20passed-brightgreen.svg)](tests/unit_tests/)
 
 ---
 
-## Quick Start (Local Python Development)
+## Table of Contents
+
+- [1. Problem Statement](#1-problem-statement)
+- [2. Solution Overview](#2-solution-overview)
+- [3. Key Architectural Capabilities](#3-key-architectural-capabilities)
+- [4. System Architecture](#4-system-architecture)
+- [5. End-to-End Request Workflow](#5-end-to-end-request-workflow)
+- [6. Real-World Troubleshooting Scenario](#6-real-world-troubleshooting-scenario)
+- [7. Hybrid RAG Retrieval Pipeline](#7-hybrid-rag-retrieval-pipeline)
+- [8. Reciprocal Rank Fusion (RRF)](#8-reciprocal-rank-fusion-rrf)
+- [9. Agent Orchestration Layer](#9-agent-orchestration-layer)
+- [10. Stateful Runbook Engine](#10-stateful-runbook-engine)
+- [11. MCP Operations Tool Layer](#11-mcp-operations-tool-layer)
+- [12. Ticketing & ITSM Lifecycle](#12-ticketing--itsm-lifecycle)
+- [13. Security, RBAC & HITL Approvals](#13-security-rbac--hitl-approvals)
+- [14. Layered Guardrails](#14-layered-guardrails)
+- [15. Persistent Conversation Memory](#15-persistent-conversation-memory)
+- [16. Evaluation & Regression Detection](#16-evaluation--regression-detection)
+- [17. Data-Driven Benchmark Results](#17-data-driven-benchmark-results)
+- [18. Technology Stack](#18-technology-stack)
+- [19. Repository Structure](#19-repository-structure)
+- [20. API Reference](#20-api-reference)
+- [21. Local Setup & Quickstart](#21-local-setup--quickstart)
+- [22. Testing & Quality Assurance](#22-testing--quality-assurance)
+- [23. Engineering Decisions](#23-engineering-decisions)
+- [24. STAR Project Summary](#24-star-project-summary)
+- [25. Technical Highlights & Limitations](#25-technical-highlights--limitations)
+
+---
+
+## 1. Problem Statement
+
+Modern enterprise IT support faces compounding operational bottlenecks:
+- **Repetitive Tier 1 Inquiries:** High volume of routine requests (VPN setup, Wi-Fi 802.1X certificates, MFA synchronization, password resets, hardware diagnostics) consume engineering bandwidth.
+- **Fragmented Knowledge Silos:** Internal runbooks, company security policies, and incident wikis are scattered across multiple repositories, leading to inconsistent troubleshooting.
+- **LLM Hallucinations & Lack of Process Rigor:** Pure generative chatbots risk inventing diagnostic steps, skipping mandatory validation protocols, or executing unsafe system modifications.
+- **Security & Authorization Risks:** Autonomous AI tools operating without strict role boundaries or human approval mechanisms create privilege escalation and data exposure vulnerabilities.
+- **Operational Blind Spots:** Lack of structured evaluation across multi-step agent decisions makes it difficult to measure diagnostic accuracy versus superficial text fluency.
+
+---
+
+## 2. Solution Overview
+
+The **IT Operations & Support Copilot** bridges the gap between semantic knowledge retrieval and deterministic enterprise execution. It acts as an intelligent first-line operational platform that:
+
+```mermaid
+flowchart LR
+    User([Employee Issue]) --> Router[Deterministic Intent Router]
+    Router --> Context[Operational Context & Service Outages]
+    Context --> RAG[Hybrid RAG Knowledge Retrieval]
+    RAG --> Engine[Stateful Troubleshooting Runbook]
+    Engine --> Tools[MCP Operations Tooling]
+    Tools --> Security{RBAC & HITL Gate}
+    Security -->|Authorized| Exec[Ticket / Incident Updates]
+    Security -->|High-Risk| Approval[Human Approval Queue]
+    Exec --> Audit[(Sanitized Audit Trail)]
+```
+
+1. **Classifies Intents Deterministically:** Maps natural language to canonical IT domains.
+2. **Grounds Responses in Verified Policies:** Retrieves relevant context using dense vector embeddings + lexical BM25 fused via Reciprocal Rank Fusion (RRF).
+3. **Executes Structured Troubleshooting:** Guides users through strict, stateful runbook graphs without skipping verification stages.
+4. **Performs Typed IT Operations:** Queries user identity, device inventory, service health, and manages ticket lifecycles via Model Context Protocol (MCP) tools.
+5. **Enforces Zero-Trust Security:** Restricts document retrieval and tool execution using an authoritative 5-role RBAC matrix, resource scoping, and Human-in-the-Loop (HITL) gates.
+
+---
+
+## 3. Key Architectural Capabilities
+
+| Dimension | Implementation Details |
+|---|---|
+| **Hybrid RAG** | Dense semantic vectors (`text-embedding-3-small`) + Lexical BM25 full-text search combined via Reciprocal Rank Fusion ($k=60$). |
+| **Agent Orchestration** | LangGraph ReAct agent loop governed by structured COSTAR system prompt engineering and deterministic intent gates. |
+| **Stateful Runbooks** | 10 synthetic enterprise runbooks compiled into a deterministic LangGraph `STEP` $\rightarrow$ `EVALUATE` $\rightarrow$ `BRANCH` state machine. |
+| **MCP Tooling** | 5 typed operational tools (`get_user_context`, `get_device_info`, `check_service_status`, `create_ticket`, `update_ticket`) supporting FastMCP and direct modes. |
+| **Security & RBAC** | 5 strongly typed enterprise roles (`EMPLOYEE`, `IT_SUPPORT`, `SECURITY_ANALYST`, `IT_ADMIN`, `SYSTEM_ADMIN`), 17 permissions, cross-user isolation, and pre-retrieval access filtering. |
+| **HITL Approvals** | 4 risk tiers (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) with strict separation of duties (agents/requesters cannot approve own actions). |
+| **Ticketing & ITSM** | State machine lifecycle (`NEW` $\rightarrow$ `OPEN` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `WAITING_FOR_USER` $\rightarrow$ `RESOLVED` $\rightarrow$ `CLOSED` \| `ESCALATED`) with duplicate prevention. |
+| **Persistent Memory** | MongoDB Atlas checkpointer (`MongoDBSaver`) preserving multi-turn context and runbook state across process restarts. |
+| **Automated Evaluation** | 105-scenario IT benchmark (`v1_it_support_benchmark.json`), 12 IT-specific metrics, and zero-cherry-picking regression reporting. |
+| **Operations Console** | Role-aware web console with Active Runbook Step Tracker, Admin KPI Dashboard, Support Ticket Queue, Incident Monitor, and Audit Inspector. |
+
+---
+
+## 4. System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client["Presentation & Client Layer"]
+        UI_User["Employee Chat UI"]
+        UI_Step["Runbook Step Tracker Widget"]
+        UI_Admin["Admin Operations Dashboard"]
+    end
+
+    subgraph Gateway["FastAPI REST & Security Gateway"]
+        API["FastAPI App (/api/v1/*)"]
+        RBAC["RBAC & Authorization Guard"]
+        AuditSvc["Sanitized Audit Service"]
+    end
+
+    subgraph Agent["LangGraph Orchestration Core"]
+        Router["Deterministic Intent Classifier"]
+        ReAct["ReAct Reasoning Loop"]
+        COSTAR["COSTAR Grounding Prompt"]
+    end
+
+    subgraph Execution["Domain Subsystems"]
+        RAG["Hybrid RAG (Vector + BM25 + RRF)"]
+        Runbook["Stateful Runbook Graph Engine"]
+        MCP["FastMCP / Direct Operational Tools"]
+    end
+
+    subgraph Storage["MongoDB Atlas Cluster"]
+        DB_Vec[("Vector & Full-Text Search")]
+        DB_Mem[("Checkpointer (MongoDBSaver)")]
+        DB_Ops[("Tickets, Incidents, Users, Audit")]
+    end
+
+    Client --> Gateway
+    Gateway --> Agent
+    Agent --> Execution
+    Execution --> Storage
+    RBAC -.-> Gateway
+    AuditSvc -.-> DB_Ops
+```
+
+*(Vector diagram available at [`docs/assets/architecture.svg`](docs/assets/architecture.svg))*
+
+---
+
+## 5. End-to-End Request Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Employee as Employee
+    participant API as FastAPI Gateway
+    participant Agent as LangGraph Agent
+    participant RAG as Hybrid RAG (RRF)
+    participant RB as Runbook Engine
+    participant MCP as MCP Tools
+    participant HITL as Human Approver
+    participant DB as MongoDB
+
+    Employee->>API: "My VPN connection is failing from home"
+    API->>Agent: Route query with UserContext (Role: EMPLOYEE)
+    Agent->>Agent: Classify Intent -> VPN_ISSUE
+    Agent->>MCP: check_service_status(service_name="corporate_vpn")
+    MCP-->>Agent: Status: OPERATIONAL (No global outage)
+    Agent->>RAG: Hybrid Search ("VPN troubleshooting certificate")
+    RAG-->>Agent: Top-3 Policy Chunks (Access Verified)
+    Agent->>RB: Start Runbook ("RB-NET-VPN-001")
+    RB-->>Agent: Step 1: Check Internet & Client Version
+    Agent-->>Employee: Response with Step Tracker Widget (Step 1/4)
+    Employee->>Agent: "Internet is working, client is up to date"
+    Agent->>RB: Evaluate Step 1 -> Outcome: SUCCESS -> Advance
+    RB-->>Agent: Step 2: Expired Certificate Renewal
+    Agent-->>Employee: Step 2 instructions & renewal link
+```
+
+*(Vector diagram available at [`docs/assets/workflow.svg`](docs/assets/workflow.svg))*
+
+---
+
+## 6. Real-World Troubleshooting Scenario
+
+### Step-by-Step VPN Diagnosis (`RB-NET-VPN-001`)
+
+```text
+1. User Prompt:
+   "My Cisco AnyConnect VPN fails to connect with error 'Login Failed: Certificate Expired'."
+
+2. Intent & Context Resolution:
+   • Intent: VPN_ISSUE (Deterministic match)
+   • User: Jane Doe (Engineering, Role: EMPLOYEE)
+   • Device: DEV-MBP-401 (macOS 14.2, AnyConnect 4.10)
+   • Service Check: corporate_vpn -> OPERATIONAL (No active incidents)
+
+3. Runbook Initiation:
+   • Selected Runbook: RB-NET-VPN-001 ("Corporate VPN Connectivity Troubleshooting")
+   • Checkpointer: Session thread initialized in MongoDB
+
+4. Step Execution Flow:
+   • Step 1 (Network Verification): Verified local internet connectivity -> [SUCCESS]
+   • Step 2 (Certificate Validation): Identified expired user certificate -> [FAILURE PATH]
+   • Step 3 (Self-Service Renewal): Dispatched automated certificate provisioning workflow -> [SUCCESS]
+   • Step 4 (Reconnection Test): VPN tunnel established successfully -> [RESOLVED]
+
+5. Lifecycle Completion:
+   • Ticket Status: Automatically resolved without unnecessary tier-2 escalation.
+   • Audit Log: Diagnostic steps and tool calls recorded with sanitized payload.
+```
+
+---
+
+## 7. Hybrid RAG Retrieval Pipeline
+
+The retrieval subsystem ensures grounded context synthesis without hallucinations by combining dense embeddings with lexical keyword matching:
+
+```mermaid
+flowchart TD
+    Q[Employee Query] --> Norm[Text Normalization]
+    Norm --> Emb[OpenAI text-embedding-3-small]
+    Norm --> BM25[Lexical BM25 / Text Search]
+    Emb --> VecIdx[(MongoDB Vector Index)]
+    BM25 --> TextIdx[(MongoDB Full-Text Index)]
+    VecIdx --> RRF[Reciprocal Rank Fusion k=60]
+    TextIdx --> RRF
+    RRF --> Dedup[Deduplication & Top-K Ranking]
+    Dedup --> Filter{Pre-Retrieval Access Filter}
+    Filter -->|Allowed| Context[Grounded Context Chunks]
+    Filter -->|Restricted| Drop[Dropped Before LLM]
+    Context --> LLM[COSTAR Prompt Grounding]
+```
+
+*(Vector diagram available at [`docs/assets/rag-pipeline.svg`](docs/assets/rag-pipeline.svg))*
+
+---
+
+## 8. Reciprocal Rank Fusion (RRF)
+
+Dense semantic retrieval excel at conceptual similarity but can miss exact alphanumeric identifiers (e.g., error codes like `ERR-401-CERT`, protocol names, ticket IDs). Lexical search excels at exact keywords but lacks semantic understanding.
+
+We combine both rankings using **Reciprocal Rank Fusion (RRF)**:
+
+$$\text{RRF}(d) = \sum_{m \in M} \frac{w_m}{k + r_m(d)}$$
+
+Where:
+- $M = \{\text{vector}, \text{lexical}\}$
+- $k = 60$ (Standard smoothing constant preventing top-ranked dominance)
+- $w_{\text{vector}} = 1.0$, $w_{\text{lexical}} = 1.0$ (Equal default weighting)
+- $r_m(d)$ is the 1-based rank position of document $d$ in system $m$.
+
+**Why Rank Fusion Over Score Addition:**
+Raw cosine similarity scores $[0, 1]$ and BM25 scores $[0, \infty)$ have incompatible probability distributions. Normalizing and summing raw scores introduces calibration distortion; RRF provides scale-invariant, monotonic combination.
+
+---
+
+## 9. Agent Orchestration Layer
+
+The copilot utilizes LangGraph to coordinate reasoning and deterministic tooling:
+
+- **COSTAR System Prompt:** Formulates context, objective, style, tone, audience, and response format constraints to prevent ungrounded generation.
+- **ReAct Execution Cycle:** The agent alternates between reasoning (`thought`), action (`tool invocation`), and observation (`tool output analysis`).
+- **Citation Enforcement:** Every factual statement regarding company policy must cite the exact source document name (e.g., `[1 - Remote Working.txt]`).
+- **Deterministic Boundary:** While the LLM synthesizes natural dialogue and extracts entities, runbook state transitions and ticket lifecycles are strictly governed by Python domain state machines.
+
+---
+
+## 10. Stateful Runbook Engine
+
+The runbook engine implements 10 synthetic enterprise diagnostic graphs:
+
+| Runbook ID | Title | Category | Steps |
+|---|---|---|---|
+| `RB-NET-VPN-001` | Corporate VPN Connectivity Troubleshooting | Network | 4 |
+| `RB-NET-WIFI-002` | Office Wi-Fi 802.1X Authentication | Network | 4 |
+| `RB-ACC-MFA-003` | MFA Token Resynchronization & Push Failure | Access | 4 |
+| `RB-ACC-PWD-004` | Password Reset & Active Directory Unlock | Access | 4 |
+| `RB-ACC-GIT-005` | GitHub SSO & SSH Key Access Provisioning | Access | 3 |
+| `RB-ACC-JIR-006` | Jira Service Management Permissions | Access | 3 |
+| `RB-SFT-OUT-007` | Outlook Email & Calendar Sync Diagnostics | Software | 4 |
+| `RB-HDW-PRN-008` | Network Printer Connection & Badge Tap | Hardware | 4 |
+| `RB-HDW-DSP-009` | External Monitor & Docking Station Signal | Hardware | 3 |
+| `RB-SEC-PHS-010` | Phishing Email & Security Incident Triage | Security | 4 |
+
+```mermaid
+stateDiagram-v2
+    [*] --> START
+    START --> STEP_1: Initialize Runbook
+    STEP_1 --> EVALUATE_1: Execute Diagnostic
+    EVALUATE_1 --> STEP_2: Success (Next Step)
+    EVALUATE_1 --> STEP_1: Failure (Retry <= 2)
+    EVALUATE_1 --> ESCALATED: Unrecoverable Blocker
+    STEP_2 --> EVALUATE_2: Verify Action
+    EVALUATE_2 --> RESOLVED: Problem Fixed
+    EVALUATE_2 --> ESCALATED: Tier 2 Queue
+    RESOLVED --> [*]
+    ESCALATED --> [*]
+```
+
+*(Vector diagram available at [`docs/assets/runbook-flow.svg`](docs/assets/runbook-flow.svg))*
+
+---
+
+## 11. MCP Operations Tool Layer
+
+The copilot integrates with enterprise IT services via the **Model Context Protocol (MCP)**:
+
+```mermaid
+flowchart LR
+    Agent[LangGraph Agent] --> Client[MCP Client Adapter]
+    Client --> Server[FastMCP Server]
+    Server --> T1[get_user_context]
+    Server --> T2[get_device_info]
+    Server --> T3[check_service_status]
+    Server --> T4[create_ticket]
+    Server --> T5[update_ticket]
+    T1 & T2 & T3 & T4 & T5 --> Mongo[(MongoDB Domain Stores)]
+```
+
+- **Dual Execution Modes:** Fully functional in Direct Mode (in-process LangChain StructuredTools) and FastMCP Server Mode (JSON-RPC over stdio / SSE).
+- **Sensitive Data Redaction:** Passwords, private session tokens, and connection strings are automatically scrubbed from tool returns and audit trails.
+
+---
+
+## 12. Ticketing & ITSM Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> NEW
+    NEW --> OPEN: Agent Triage
+    OPEN --> IN_PROGRESS: Begin Diagnosis
+    IN_PROGRESS --> WAITING_FOR_USER: Awaiting Employee Response
+    WAITING_FOR_USER --> IN_PROGRESS: Employee Responds
+    IN_PROGRESS --> RESOLVED: Issue Fixed
+    RESOLVED --> CLOSED: Archived
+    OPEN --> ESCALATED: Complex Blocker
+    IN_PROGRESS --> ESCALATED: Escalated to Tier 2/3
+```
+
+*(Vector diagram available at [`docs/assets/ticket-lifecycle.svg`](docs/assets/ticket-lifecycle.svg))*
+
+- **Duplicate Ticket Prevention:** Detects existing unresolved tickets matching user, title, and structured category to prevent queue flooding.
+- **Deterministic State Transitions:** State changes must follow the strict transition graph; invalid changes are rejected with `InvalidTicketTransitionError` (HTTP 422).
+
+---
+
+## 13. Security, RBAC & HITL Approvals
+
+```mermaid
+flowchart TD
+    Identity[User Identity & Role] --> Matrix{17-Permission Matrix}
+    Matrix -->|Authorized| Scope{Resource Scoping & Isolation}
+    Matrix -->|Denied| Deny[HTTP 403 Forbidden]
+    Scope --> Risk{Risk Tier Evaluation}
+    Risk -->|Low / Medium| AutoExec[Direct Safe Execution]
+    Risk -->|High / Critical| HITL[Human Approval Workflow]
+    HITL -->|Admin Approves| Exec[Execute Tool Operation]
+    HITL -->|Admin Rejects / Expired| Reject[Action Aborted]
+    AutoExec & Exec --> Audit[(MongoDB Sanitized Audit Log)]
+```
+
+*(Vector diagram available at [`docs/assets/security-flow.svg`](docs/assets/security-flow.svg))*
+
+### Role-Based Access Matrix
+
+| Permission | EMPLOYEE | IT_SUPPORT | SECURITY_ANALYST | IT_ADMIN | SYSTEM_ADMIN |
+|---|:---:|:---:|:---:|:---:|:---:|
+| `READ_PUBLIC_POLICY` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `READ_INTERNAL_POLICY` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `READ_CONFIDENTIAL_POLICY` | ✗ | ✗ | ✗ | ✓ | ✓ |
+| `READ_SECURITY_OPS_POLICY` | ✗ | ✗ | ✓ | ✗ | ✓ |
+| `QUERY_OWN_TICKETS` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `QUERY_ALL_TICKETS` | ✗ | ✓ | ✓ | ✓ | ✓ |
+| `CREATE_TICKET` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `UPDATE_TICKET` | ✗ | ✓ | ✓ | ✓ | ✓ |
+| `EXECUTE_RUNBOOK` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `VIEW_USER_CONTEXT_SELF` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `VIEW_USER_CONTEXT_OTHERS`| ✗ | ✓ | ✓ | ✓ | ✓ |
+| `VIEW_DEVICE_INFO_SELF` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `VIEW_DEVICE_INFO_OTHERS` | ✗ | ✓ | ✓ | ✓ | ✓ |
+| `CHECK_SERVICE_STATUS` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `APPROVE_HIGH_RISK_ACTION`| ✗ | ✗ | ✗ | ✓ | ✓ |
+| `VIEW_AUDIT_LOGS` | ✗ | ✗ | ✓ | ✓ | ✓ |
+| `MANAGE_SYSTEM_CONFIG` | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+---
+
+## 14. Layered Guardrails
+
+1. **Input Guardrails:** Regex and semantic pattern filters against prompt injection, jailbreak attempts, and command injection.
+2. **Context Guardrails:** Pre-retrieval document classification filtering preventing unauthorized access chunks from entering prompt memory.
+3. **Generation Guardrails:** Token length limits, negative response templates, and refusal formatting for out-of-domain queries (e.g., cooking recipes, poems).
+4. **Output Guardrails:** Post-generation regex filters preventing accidental exposure of internal system prompts, hidden chain-of-thought, or unverified claims.
+
+---
+
+## 15. Persistent Conversation Memory
+
+- **Thread Isolation:** Each conversation is bound to a unique `thread_id` and isolated at the MongoDB database level.
+- **MongoDBSaver Checkpointer:** Agent states, intermediate tool outputs, and runbook step milestones are saved after every LangGraph node execution.
+- **Zero Interruption:** When services restart or container pods scale, users can resume ongoing troubleshooting sessions seamlessly.
+
+---
+
+## 16. Evaluation & Regression Detection
+
+The system features an automated evaluation harness reading versioned benchmark datasets:
+
+```mermaid
+flowchart TD
+    Bench[v1_it_support_benchmark.json 105 Cases] --> Runner[Evaluation Runner]
+    Runner --> Offline[Deterministic Workflow Mode]
+    Runner --> Live[Full LLM / Retrieval Mode]
+    Offline & Live --> Metrics[Compute 12 IT Metrics + RAGAS Bundle]
+    Metrics --> Comp[Regression Comparator]
+    Comp --> Report[it_support_regression_report.md]
+    Comp --> Failures[9 Failure Categories Isolated]
+```
+
+### 9 Regressed Failure Categories Detected
+1. `RETRIEVAL_MISS`: Recall@3 < 0.50
+2. `WRONG_INTENT`: Misclassified user intent
+3. `WRONG_RUNBOOK`: Incorrect troubleshooting graph selected
+4. `WRONG_TOOL`: Missing required operational tools
+5. `WRONG_TICKET_TYPE`: Ticket category mismatch
+6. `WRONG_ESCALATION`: Missed or unnecessary human escalation
+7. `UNAUTHORIZED_ACTION`: Unapproved or privilege-violating execution
+8. `GROUNDING_FAILURE`: Faithfulness score < 0.70
+9. `LATENCY_BREACH`: Execution time > 5000 ms SLA
+
+---
+
+## 17. Data-Driven Benchmark Results
+
+All metrics below are generated directly from the reproducible 105-case enterprise benchmark run ([`evaluation/results/it_support_run.json`](evaluation/results/it_support_run.json)):
+
+### IT Workflow & Agent Execution Quality
+![IT Workflow Metrics](docs/assets/it-workflow-metrics.svg)
+
+### Hybrid Retrieval & Policy Grounding
+![Retrieval Metrics](docs/assets/retrieval-metrics.svg)
+
+### Operational Latency Breakdown
+![Operational Metrics](docs/assets/operational-metrics.svg)
+
+### Verified Metric Summary Table
+
+| Category | Metric | Measured Value | SLA Target | Status |
+|---|---|:---:|:---:|:---:|
+| **IT Workflow** | Intent Classification Accuracy | **83.8%** | $\ge 80.0\%$ | 🟢 PASS |
+| **IT Workflow** | Runbook Selection Accuracy | **84.4%** | $\ge 80.0\%$ | 🟢 PASS |
+| **IT Workflow** | Runbook Completion Rate | **80.0%** | $\ge 75.0\%$ | 🟢 PASS |
+| **IT Workflow** | Ticket Creation Success Rate | **100.0%** | $\ge 95.0\%$ | 🟢 PASS |
+| **IT Workflow** | Escalation Accuracy | **100.0%** | $\ge 95.0\%$ | 🟢 PASS |
+| **Security** | RBAC / Unauthorized Action Blocking | **100.0%** | $100.0\%$ | 🟢 PASS |
+| **Retrieval** | Recall@3 (Ground Truth Policy Chunks) | **1.0000** | $\ge 0.80$ | 🟢 PASS |
+| **Retrieval** | Precision@3 | **0.7778** | $\ge 0.60$ | 🟢 PASS |
+| **Retrieval** | MRR (Mean Reciprocal Rank) | **1.0000** | $\ge 0.80$ | 🟢 PASS |
+| **Generation** | Faithfulness (Claim Grounding) | **0.9928** | $\ge 0.85$ | 🟢 PASS |
+| **Operational** | Average Total Latency | **135.7 ms** | $\le 5000\text{ ms}$ | 🟢 PASS |
+| **Operational** | Estimated Cost per Query | **$0.0008** | $\le \$0.01$ | 🟢 PASS |
+
+---
+
+## 18. Technology Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Language** | Python 3.10 / 3.11 / 3.12 | Core backend and evaluation engine |
+| **Agent Core** | LangGraph / LangChain | StateGraph orchestration, ReAct reasoning loop |
+| **Language Model** | OpenAI GPT-4o-mini / Anthropic | Grounded synthesis and entity extraction |
+| **Embeddings** | OpenAI `text-embedding-3-small` | 1536-dimensional dense vector embeddings |
+| **Database** | MongoDB Atlas | Vector Search, Full-Text Index, MongoDBSaver checkpointer |
+| **Protocol** | Model Context Protocol (FastMCP) | Standardized, typed operational tool layer |
+| **API** | FastAPI / Uvicorn | High-performance asynchronous REST gateway |
+| **Frontend** | Vanilla JS / CSS / HTML5 | Dark-mode console with live Runbook Step Tracker |
+| **Evaluation** | Custom Engine + RAGAS Bundle | 105-case reproducible synthetic benchmark harness |
+| **Containerization** | Docker / Docker Compose | Multi-stage production containers & orchestration |
+
+---
+
+## 19. Repository Structure
+
+```text
+IT-Operations-and-Support-Copilot/
+├── data/
+│   ├── ingested_documents/policies/     # Markdown/Text company policies
+│   └── evaluation_documents/            # Baseline test documents
+├── docs/
+│   ├── assets/                          # SVG architecture diagrams & charts
+│   ├── IT_EVALUATION.md                 # Complete evaluation reference guide
+│   ├── MCP_IT_OPERATIONS.md             # MCP tool specifications
+│   ├── RBAC_SECURITY_MODEL.md           # Security & authorization matrix
+│   └── STAR_STORY.md                    # Structured STAR project story
+├── evaluation/
+│   ├── datasets/                        # v1_it_support_benchmark.json (105 cases)
+│   ├── metrics/                         # 12 IT metrics & RAGAS calculators
+│   ├── reports/                         # it_support_regression_report.md
+│   ├── results/                         # it_support_run.json / csv
+│   └── runners/                         # eval_runner.py & regression_comparator.py
+├── scripts/
+│   ├── generate_readme_charts.py        # Reproducible chart generator
+│   └── seed_it_operations_data.py       # Idempotent DB seeder
+├── src/mcp_rag_agent/
+│   ├── agent/                           # LangGraph agent & COSTAR prompts
+│   ├── api/                             # FastAPI routes, dependencies, static UI
+│   │   ├── routes/                      # chat.py, tickets.py, admin.py
+│   │   └── static/                      # app.js, index.html, styles.css
+│   ├── core/                            # Config, checkpointer, logging
+│   ├── embeddings/                      # Hybrid search & indexing pipeline
+│   ├── guardrails/                      # Layered input/output guardrails
+│   ├── it_support/                      # Tickets, Runbooks, Users, Devices, Services
+│   │   ├── runbooks/                    # 10 enterprise runbook graphs & registry
+│   │   └── tickets/                     # Ticket lifecycle service & store
+│   ├── mcp_server/                      # FastMCP server & typed tools
+│   └── security/                        # RBAC matrix, authorization, HITL, audit
+└── tests/
+    ├── unit_tests/                      # 340 offline unit & contract tests
+    └── integration_tests/               # External MongoDB / OpenAI integration tests
+```
+
+---
+
+## 20. API Reference
+
+### Core & Chat Endpoints
+- `POST /api/v1/chat`: Main agent conversation endpoint supporting multi-turn memory.
+- `GET /health` & `GET /ready`: Kubernetes-compatible health and readiness probes.
+
+### IT Support Operations
+- `POST /api/v1/it/tickets`: Create a support ticket (with automatic duplicate detection).
+- `GET /api/v1/it/tickets/{id}`: Retrieve ticket details and status history.
+- `PATCH /api/v1/it/tickets/{id}`: Transition lifecycle state or update assignment.
+
+### Administration & Operations Console (RBAC Protected)
+- `GET /api/v1/admin/tickets`: Searchable, filterable ticket queue (`IT_ADMIN`, `SYSTEM_ADMIN`).
+- `GET /api/v1/admin/incidents`: Active and historical service incident monitor.
+- `GET /api/v1/admin/metrics`: Aggregated operational KPIs (resolution times, AI resolutions).
+- `GET /api/v1/admin/evaluation`: Live benchmark scores and quality metrics.
+- `GET /api/v1/admin/audit`: Sanitized security audit log stream (`SECURITY_ANALYST`, `IT_ADMIN`).
+
+---
+
+## 21. Local Setup & Quickstart
 
 ### Prerequisites
+- Python 3.10+
+- MongoDB 6.0+ (Local or MongoDB Atlas cluster with Vector Index enabled)
+- OpenAI API Key
 
-- Python 3.8+
-- MongoDB Atlas account (for vector search)
-- OpenAI API key
-
-### Installation
-
-1. **Clone the repository**:
+### 1. Clone & Environment Setup
 ```bash
-git clone <repository-url>
-cd mcp-rag-agent
-```
-
-2. **Run the `start` file**:
-```bash
-# Windows:
-start.cmd
-
-# Linux/macOS:
-chmod +x start.sh
-./start.sh
-```
-This script will automatically:
-- Install and upgrade pip
-- Create and activate a virtual environment
-- Install all development dependencies
-- Install the package in editable mode
-
-3. **Configure environment variables**:
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-### Setup Workflow
-
-1. **Index documents**:
-```bash
-python -m mcp_rag_agent.embeddings.index_documents
-```
-This will:
-- Read documents from `data/ingested_documents/`
-- Generate embeddings using OpenAI
-- Store vectors in MongoDB Atlas
-- Create vector search index
-
-2. **Test the MCP server** (optional - requires Node.js):
-```bash
-mcp dev src/mcp_rag_agent/mcp_server/server.py
-```
-This opens a UI to test the `search_documents` tool and other resources.
-
-3. **Run the agent**:
-```bash
-python -m mcp_rag_agent.agent.create_agent
-```
-This runs a demo query showing the agent in action.
-
-4. **Evaluate performance** (optional):
-```bash
-python evaluation/main.py
-```
-Runs automated evaluation using RAGAS metrics.
-
-## Usage Examples
-
-### Basic Agent Query
-
-```python
-import asyncio
-from mcp_rag_agent.agent.create_agent import create_mcp_rag_agent
-from mcp_rag_agent.agent.prompts import system_prompt
-from mcp_rag_agent.core.config import config
-
-async def main():
-    # Create agent
-    agent = await create_mcp_rag_agent(
-        system_prompt=system_prompt,
-        config=config
-    )
-    
-    # Query the agent
-    result = await agent.ainvoke({
-        "messages": [{
-            "role": "user",
-            "content": "What is the remote working policy?"
-        }]
-    })
-    
-    # Get the answer
-    answer = result["messages"][-1].content
-    print(answer)
-
-asyncio.run(main())
-```
-
-### Direct Semantic Search
-
-```python
-import asyncio
-from mcp_rag_agent.mongodb.client import MongoDBClient
-from mcp_rag_agent.embeddings.embedding_generator import EmbeddingGenerator
-from mcp_rag_agent.embeddings.semantic_search import SemanticSearch
-from mcp_rag_agent.core.config import config
-
-async def main():
-    # Setup
-    mongo_client = MongoDBClient(config.db_url, config.db_name)
-    mongo_client.connect()
-    
-    embedder = EmbeddingGenerator(
-        api_key=config.model_api_key,
-        model=config.embedding_model
-    )
-    
-    search = SemanticSearch(mongo_client, embedder)
-    
-    # Search
-    results = await search.search(
-        query="annual leave entitlement",
-        limit=3
-    )
-    
-    for doc in results:
-        print(f"File: {doc['file_name']}")
-        print(f"Score: {doc['score']:.3f}")
-        print(f"Content: {doc['content'][:200]}...\n")
-    
-    mongo_client.disconnect()
-
-asyncio.run(main())
-```
-
-### Hybrid Search (Recommended)
-
-```python
-import asyncio
-from mcp_rag_agent.mongodb.client import MongoDBClient
-from mcp_rag_agent.embeddings.embedding_generator import EmbeddingGenerator
-from mcp_rag_agent.embeddings.hybrid_search import HybridSearch
-from mcp_rag_agent.core.config import config
-
-async def main():
-    # Setup
-    mongo_client = MongoDBClient(config.db_url, config.db_name)
-    mongo_client.connect()
-    
-    embedder = EmbeddingGenerator(
-        api_key=config.model_api_key,
-        model=config.embedding_model
-    )
-    
-    hybrid = HybridSearch(
-        mongo_client=mongo_client,
-        embedding_generator=embedder,
-        default_collection=config.db_vector_collection
-    )
-    
-    # Perform hybrid search (combines semantic + keyword matching)
-    results = await hybrid.search(
-        query="What are the sustainability initiatives?",
-        limit=5,
-        semantic_weight=0.7  # 70% semantic, 30% keyword (default)
-    )
-    
-    for doc in results:
-        print(f"RRF Score: {doc['rrf_score']:.4f}")
-        print(f"Vector Rank: {doc['vector_rank']}, Text Rank: {doc['text_rank']}")
-        print(f"Content: {doc['content'][:200]}...\n")
-    
-    mongo_client.disconnect()
-
-asyncio.run(main())
-```
-
-### Indexing New Documents
-
-```python
-import asyncio
-from mcp_rag_agent.embeddings.index_documents import index_documents
-from mcp_rag_agent.core.config import config
-
-async def main():
-    await index_documents(
-        directory_path="data/ingested_documents",
-        config=config
-    )
-
-asyncio.run(main())
-```
-
-## Module Documentation
-
-Each module has detailed documentation:
-
-- **[Agent](src/mcp_rag_agent/agent/README.md)**: LangGraph ReAct agent with MCP integration
-- **[MCP Server](src/mcp_rag_agent/mcp_server/README.md)**: FastMCP server providing RAG tools
-- **[MongoDB](src/mcp_rag_agent/mongodb/README.md)**: Database client with vector, text, and hybrid search capabilities
-  - See [SEARCH_GUIDE.md](src/mcp_rag_agent/mongodb/SEARCH_GUIDE.md) for detailed comparison of search methods
-- **[Embeddings](src/mcp_rag_agent/embeddings/README.md)**: Document indexing, semantic search, and hybrid search
-- **[Evaluation](evaluation/README.md)**: Automated testing with RAGAS metrics
-
-## Configuration
-
-Configuration is managed through two layers:
-1. Environment Variables (`.env`): Most settings are configured via environment variables, although only the external dependencies are included in the `.env.sample` file.
-2. Code Configuration (`src/mcp_rag_agent/core/config.py`): Some advanced settings are configured directly in the `Config` class, such as text generation parameters (temperature,...)
-
-**Note:** To modify these settings, edit `src/mcp_rag_agent/core/config.py` directly. The `Config` class loads environment variables and provides default values for all configuration parameters.
-
-## Key Technologies
-
-- **[LangChain](https://python.langchain.com/)**: Agent framework and orchestration
-- **[Model Context Protocol (MCP)](https://modelcontextprotocol.io/)**: Standardized tool integration
-- **[FastMCP](https://github.com/jlowin/fastmcp)**: MCP server implementation
-- **[MongoDB Atlas](https://www.mongodb.com/atlas/database)**: Vector storage and search
-- **[OpenAI](https://openai.com/)**: LLM and embedding models
-- **[RAGAS](https://docs.ragas.io/)**: RAG evaluation framework
-
-## Development
-
-### Running Tests
-
-```bash
-pytest tests/
-```
-
-### Code Structure
-
-- Follow Python best practices and PEP 8
-- Use type hints for all functions
-- Add docstrings to public APIs
-- Keep modules focused and cohesive
-
-### Adding New Features
-
-1. **New MCP Tool**:
-   - Add `@mcp.tool()` decorated function in `server.py`
-   - Document in MCP server README
-   - Test with `mcp dev`
-
-2. **New Document Type**:
-   - Update `index_documents.py` to handle new format
-   - Ensure metadata is preserved
-   - Re-index documents
-
-3. **New Metric**:
-   - Add to `evaluation/metrics.py`
-   - Update evaluator to compute and save metric
-   - Document in evaluation README
-
-## Evaluation
-
-The project includes comprehensive evaluation tools using RAGAS:
-
-```bash
-python evaluation/evaluator.py
-```
-
-**Metrics computed**:
-- [Answer Relevancy](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/answer_relevance/)
-- [Answer Similarity](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/semantic_similarity/)
-- [Answer Correctness](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/factual_correctness/)
-
-Results are saved to `evaluation/results/` with timestamps.
-
-## Troubleshooting
-
-### Common Issues
-
-**MongoDB connection fails**:
-- Verify MongoDB Atlas cluster is running
-- Check IP whitelist in Atlas
-- Validate connection URI in `.env`
-
-**MCP server won't start**:
-- Ensure MongoDB is connected
-- Check OpenAI API key is valid
-- Verify all dependencies are installed
-
-**No search results**:
-- Run `index_documents.py` to populate database
-- Check vector index exists in MongoDB Atlas
-- Verify embedding dimensions match
-
-**Agent doesn't call tools**:
-- Check MCP server is accessible
-- Review system prompt encourages tool usage
-- Increase model temperature if needed
-
-**Evaluation errors**:
-- Ensure `expected_behaviour.xlsx` exists
-- Check OpenAI API quota
-- Verify evaluation model is accessible
-
-## Performance Considerations
-
-- **Indexing**: ~1-2 seconds per document (depends on document size)
-- **Query**: ~2-5 seconds per query (embedding + search + generation)
-- **Vector Search**: Sub-second for collections up to 100K documents
-- **Batch Operations**: Use `insert_documents()` for bulk indexing
-
-## Best Practices
-
-1. **Prompt Engineering**: Use COSTAR framework for all prompts
-2. **Error Handling**: Always handle connection failures gracefully
-3. **Logging**: Use structured logging for debugging
-4. **Testing**: Run evaluation after significant changes
-5. **Vector Index**: Create during setup, not runtime
-6. **Connection Pooling**: Reuse MongoDB client instances
-7. **API Rate Limits**: Implement exponential backoff for OpenAI calls
-
-## Security
-
-- Never commit `.env` file to version control
-- Rotate API keys regularly
-- Use MongoDB Atlas IP whitelisting
-- Implement rate limiting for production deployments
-- Sanitize user inputs before processing
-
-## Development Workflow & CI/CD
-
-This repository enforces strict code quality, security scanning, multi-version test coverage, and automated build validation via GitHub Actions.
-
-### Continuous Integration (CI) Architecture
-
-The main CI pipeline (`.github/workflows/ci.yml`) runs automatically on all pushes and pull requests to `main` and `master`:
-
-| Stage | Tool / Command | Objective | Secret Requirements |
-|---|---|---|---|
-| **1. Formatting** | `black --check src tests`, `isort --profile black --check src tests` | Verify adherence to PEP 8 formatting and clean import sorting | None |
-| **2. Linting** | `flake8 src tests` | Detect syntax errors, undefined names, and styling issues | None |
-| **3. Unit Tests** | `pytest tests/unit_tests -m "not integration" --cov=mcp_rag_agent` | Run 195+ isolated unit tests across Python 3.10 and 3.11 with coverage reporting | None (Mocked) |
-| **4. API Contract** | `pytest tests/unit_tests/test_api.py -v` | Validate FastAPI endpoints, Zero-CoT schemas, and error propagation | None (Mocked) |
-| **5. Build Validation** | `docker compose config`, `docker compose build`, `python -m build` | Validate container compose definitions and produce Python wheel/sdist packages | None |
-| **6. Security Scan** | `bandit -r src/ -ll`, `pip-audit --desc` | Static security analysis for vulnerabilities and automated dependency auditing | None |
-
-### Separated Integration Testing
-
-Integration tests that require live external credentials (e.g., MongoDB Atlas cluster or live OpenAI API keys) are segregated in `tests/integration_tests/` and marked with `@pytest.mark.integration`. They run via a dedicated workflow (`.github/workflows/integration.yml`) utilizing a MongoDB service container, gracefully skipping any test whose credentials are not provided.
-
-### Local Development Commands
-
-#### 1. Environment Setup
-```bash
-# Clone the repository
-git clone https://github.com/luisrodriguesphd/mcp-rag-agent.git
-cd mcp-rag-agent
-
-# Create and activate virtual environment
-python -m venv venv
-# Linux/macOS:
-source venv/bin/activate
+git clone https://github.com/dev11062004/IT-Operations-and-Support-Copilot.git
+cd IT-Operations-and-Support-Copilot
+
+# Create virtual environment
+python -m venv .venv
 # Windows PowerShell:
-.\venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
+# Linux/macOS:
+source .venv/bin/activate
 
-# Install development dependencies
+# Install dependencies
+pip install -r requirements.txt
 pip install -r requirements_dev.txt
 ```
 
-#### 2. Code Formatting & Linting
+### 2. Configure Environment Variables
+Create a `.env` file from `.env.example`:
+```ini
+OPENAI_API_KEY=sk-...
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DATABASE=mcp_rag_agent
+FEATURE_FLAG_IT_SUPPORT_ENABLED=true
+```
+
+### 3. Seed Sample Enterprise Data
 ```bash
-# Check code formatting with Black
+python scripts/seed_it_operations_data.py
+```
+
+### 4. Start the Application
+```bash
+# Start FastAPI application
+python -m uvicorn mcp_rag_agent.api.app:app --host 0.0.0.0 --port 8000 --reload
+```
+Open your browser at `http://localhost:8000` to access the chat and operations console.
+
+### 5. Running with Docker Compose
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+---
+
+## 22. Testing & Quality Assurance
+
+The test suite runs completely offline with mocked external dependencies:
+
+```bash
+# Run full offline unit test suite (340 tests)
+pytest tests/unit_tests -q
+
+# Run IT Support domain & evaluation tests
+pytest tests/unit_tests/it_support -v
+
+# Run Security, RBAC & HITL tests
+pytest tests/unit_tests/security -v
+
+# Code formatting & linting checks
 black --check src tests
-
-# Reformat automatically
-black src tests
-
-# Check and order imports with isort
 isort --profile black --check src tests
-isort --profile black src tests
-
-# Run flake8 linter
 flake8 src tests
-```
 
-#### 3. Running Unit Tests with Coverage
-Ordinary unit tests run completely offline and **do not require production secrets**:
-```bash
-# Run all unit tests with terminal coverage summary
-pytest tests/unit_tests -m "not integration" --cov=mcp_rag_agent --cov-report=term-missing
-
-# Generate XML coverage artifact
-pytest tests/unit_tests -m "not integration" --cov=mcp_rag_agent --cov-report=xml:coverage.xml
-```
-
-#### 4. Running API Tests
-```bash
-pytest tests/unit_tests/test_api.py -v
-```
-
-#### 5. Running Security Scans
-```bash
-# Run Bandit static analysis (medium & high severity)
+# Static security vulnerability analysis
 bandit -r src/ -ll
-
-# Audit dependencies for known CVEs
-pip-audit --desc
 ```
 
-#### 6. Running Integration Tests
-```bash
-# Ensure local or Atlas MongoDB is running, then run integration suite:
-pytest tests/integration_tests -m integration -v
+### Verified Test Summary
+```text
+340 passed in 23.01s (100% pass rate)
+• Baseline RAG & Core Tests: 197
+• IT Domain Foundation: 27
+• Tickets & Incidents: 16
+• Runbook Engine: 17
+• MCP Operations Tooling: 28
+• Security, RBAC & HITL: 44
+• Admin API & Evaluation: 11
 ```
 
-#### 7. Packaging Validation
-```bash
-python -m build --sdist --wheel
-```
+---
 
-## Contributing
+## 23. Engineering Decisions
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Update documentation
-6. Submit a pull request
+| Decision | Why It Was Chosen | Alternative Rejected |
+|---|---|---|
+| **Hybrid Search with RRF** | Combines semantic understanding with exact code/identifier matching without score calibration errors. | Pure vector search (misses exact tokens) or score summing (distorts probabilities). |
+| **Deterministic Runbooks** | Guarantees compliance, security protocols, and prevents AI hallucination during critical troubleshooting. | Free-form LLM planning (unpredictable, risky). |
+| **FastMCP Tool Layer** | Provides a standardized protocol for local and distributed tool exposure across microservices. | Proprietary custom RPC frameworks. |
+| **MongoDBSaver Checkpointer** | Provides native thread-isolated state persistence surviving process restarts. | In-memory only session state. |
+| **Separation of Duties HITL** | Prevents AI agents or unauthorized requesters from auto-approving destructive operations. | Automated heuristic self-approval. |
+
+---
+
+## 24. STAR Project Summary
+
+- **Situation:** Enterprise IT departments face overwhelming Tier-1 ticket volumes, fragmented documentation, and high security risks when deploying autonomous AI tools.
+- **Task:** Build a production-grade, secure IT support platform combining semantic retrieval, stateful runbook diagnosis, typed ITSM operations, and verifiable multi-step evaluation.
+- **Action:** Engineered a hybrid RAG pipeline with RRF ($k=60$), a LangGraph agent orchestrating 10 deterministic troubleshooting runbooks, 5 MCP operations tools, a 5-role RBAC security matrix with HITL gates, and a 105-scenario evaluation suite.
+- **Result:** Achieved 100% test pass rate across 340 tests, 83.8% intent accuracy, 84.4% runbook selection accuracy, 100% ticket creation and escalation accuracy, 100% unauthorized action blocking, Recall@3 of 1.0000, and Faithfulness of 0.9928 with an average total latency of 135.7 ms.
+
+*(For the detailed interview STAR narrative, see [`docs/STAR_STORY.md`](docs/STAR_STORY.md))*
+
+---
+
+## 25. Technical Highlights & Limitations
+
+### What Makes This System Stand Out
+1. **Zero Hallucination Process Execution:** Diagnostic graphs cannot transition to non-existent nodes regardless of LLM output.
+2. **True Dual-Mode Tooling:** MCP tools execute identically across stdio FastMCP servers and local direct Python calls.
+3. **Transparent Regression Tracking:** The evaluation framework transparently classifies and reports all 9 failure modes without cherry-picking.
+
+### Current Limitations & Future Roadmap
+- **Simulated Infrastructure Operations:** Actual destructive operations (e.g., AD password resets, device network isolations) are simulated against structured domain stores rather than live production Active Directory / MDM endpoints.
+- **Static Runbook Definitions:** Runbooks are currently registered via Python domain structures; future work includes dynamic YAML/JSON authoring via administrative UI.
+- **ITSM Connectors:** Future iterations can plug directly into live ServiceNow and Jira Service Management REST APIs via the MCP tool interface.
+
+---
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

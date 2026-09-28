@@ -13,11 +13,18 @@ from mcp_rag_agent.it_support.devices.models import DeviceRecord
 from mcp_rag_agent.it_support.devices.service import DeviceService
 from mcp_rag_agent.it_support.devices.store import DeviceNotFoundError
 from mcp_rag_agent.it_support.models import ITCategory, Priority
-from mcp_rag_agent.it_support.services.models import ServiceOperationalStatus, ServiceStatusRecord
+from mcp_rag_agent.it_support.services.models import (
+    ServiceOperationalStatus,
+    ServiceStatusRecord,
+)
 from mcp_rag_agent.it_support.services.service import ServiceStatusChecker
 from mcp_rag_agent.it_support.tickets.models import TicketLifecycleStatus, TicketRecord
 from mcp_rag_agent.it_support.tickets.service import TicketService
-from mcp_rag_agent.it_support.users.models import SupportTier, UserContextRecord, UserStatus
+from mcp_rag_agent.it_support.users.models import (
+    SupportTier,
+    UserContextRecord,
+    UserStatus,
+)
 from mcp_rag_agent.it_support.users.service import UserService
 from mcp_rag_agent.it_support.users.store import UserNotFoundError
 from mcp_rag_agent.mcp_server.tools import (
@@ -34,10 +41,10 @@ from mcp_rag_agent.mcp_server.tools import (
     update_ticket_typed,
 )
 
-
 # -------------------------------------------------------------------
 # In-Memory Test Doubles
 # -------------------------------------------------------------------
+
 
 class MemoryUserStore:
     def __init__(self):
@@ -74,7 +81,8 @@ class MemoryTicketStore:
                 if t.requester_id == ticket.requester_id
                 and t.category == ticket.category
                 and t.title == ticket.title
-                and t.status not in (TicketLifecycleStatus.CLOSED, TicketLifecycleStatus.RESOLVED)
+                and t.status
+                not in (TicketLifecycleStatus.CLOSED, TicketLifecycleStatus.RESOLVED)
             ),
             None,
         )
@@ -85,12 +93,14 @@ class MemoryTicketStore:
 
     def get(self, ticket_id: str) -> TicketRecord:
         from mcp_rag_agent.it_support.tickets.store import TicketNotFoundError
+
         if ticket_id not in self.records:
             raise TicketNotFoundError(ticket_id)
         return self.records[ticket_id]
 
     def update_fields(self, ticket_id: str, fields: dict) -> TicketRecord:
         from mcp_rag_agent.it_support.tickets.store import TicketNotFoundError
+
         if ticket_id not in self.records:
             raise TicketNotFoundError(ticket_id)
         payload = self.records[ticket_id].model_dump()
@@ -100,6 +110,7 @@ class MemoryTicketStore:
 
     def add_comment(self, ticket_id: str, comment) -> TicketRecord:
         from mcp_rag_agent.it_support.tickets.store import TicketNotFoundError
+
         if ticket_id not in self.records:
             raise TicketNotFoundError(ticket_id)
         self.records[ticket_id].comments.append(comment)
@@ -109,6 +120,7 @@ class MemoryTicketStore:
 # -------------------------------------------------------------------
 # Fixtures & Setup
 # -------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def setup_services():
@@ -152,6 +164,7 @@ def setup_services():
 # Test Cases
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_user_context_success():
     res = await get_user_context_typed(GetUserContextInput(user_id="EMP-1001"))
@@ -185,7 +198,9 @@ async def test_get_device_info_by_device_id_and_user_id():
     assert user_res.devices[0]["device_id"] == "DEV-001"
 
     # Not found
-    missing_res = await get_device_info_typed(GetDeviceInfoInput(device_id="DEV-NONEXISTENT"))
+    missing_res = await get_device_info_typed(
+        GetDeviceInfoInput(device_id="DEV-NONEXISTENT")
+    )
     assert missing_res.status == "not_found"
     assert missing_res.error_code == "DEVICE_NOT_FOUND"
 
@@ -199,11 +214,15 @@ async def test_get_device_info_missing_args():
 
 @pytest.mark.asyncio
 async def test_check_service_status_operational_and_unknown():
-    res_vpn = await check_service_status_typed(CheckServiceStatusInput(service_name="corporate_vpn"))
+    res_vpn = await check_service_status_typed(
+        CheckServiceStatusInput(service_name="corporate_vpn")
+    )
     assert res_vpn.status == "success"
     assert res_vpn.service_status == "OPERATIONAL"
 
-    res_unknown = await check_service_status_typed(CheckServiceStatusInput(service_name="some_weird_service"))
+    res_unknown = await check_service_status_typed(
+        CheckServiceStatusInput(service_name="some_weird_service")
+    )
     assert res_unknown.service_status == "UNKNOWN"
 
 

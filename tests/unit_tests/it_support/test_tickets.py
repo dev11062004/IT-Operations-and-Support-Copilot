@@ -5,13 +5,27 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_rag_agent.it_support.models import ITCategory
-from mcp_rag_agent.it_support.tickets.models import TicketCreate, TicketLifecycleStatus, TicketRecord
-from mcp_rag_agent.it_support.tickets.service import InvalidTicketTransitionError, TicketService
+from mcp_rag_agent.it_support.tickets.models import (
+    TicketCreate,
+    TicketLifecycleStatus,
+    TicketRecord,
+)
+from mcp_rag_agent.it_support.tickets.service import (
+    InvalidTicketTransitionError,
+    TicketService,
+)
 from mcp_rag_agent.it_support.tickets.store import TicketStore
 
 
 def _request() -> TicketCreate:
-    return TicketCreate(title="VPN unavailable", description="Cannot connect", category=ITCategory.VPN, requester_id="user-1", product="corporate VPN", platform="Windows")
+    return TicketCreate(
+        title="VPN unavailable",
+        description="Cannot connect",
+        category=ITCategory.VPN,
+        requester_id="user-1",
+        product="corporate VPN",
+        platform="Windows",
+    )
 
 
 class MemoryTicketStore:
@@ -19,7 +33,16 @@ class MemoryTicketStore:
         self.records: dict[str, TicketRecord] = {}
 
     def find_unresolved_duplicate(self, ticket: TicketRecord):
-        return next((item for item in self.records.values() if item.requester_id == ticket.requester_id and item.category == ticket.category and item.status is not TicketLifecycleStatus.CLOSED), None)
+        return next(
+            (
+                item
+                for item in self.records.values()
+                if item.requester_id == ticket.requester_id
+                and item.category == ticket.category
+                and item.status is not TicketLifecycleStatus.CLOSED
+            ),
+            None,
+        )
 
     def create(self, ticket: TicketRecord) -> TicketRecord:
         self.records[ticket.ticket_id] = ticket
@@ -51,7 +74,14 @@ def test_create_and_duplicate_detection() -> None:
 def test_lifecycle_allows_only_deterministic_transitions() -> None:
     service = TicketService(MemoryTicketStore())
     ticket = service.create_ticket(_request()).ticket
-    for target in (TicketLifecycleStatus.OPEN, TicketLifecycleStatus.IN_PROGRESS, TicketLifecycleStatus.WAITING_FOR_USER, TicketLifecycleStatus.IN_PROGRESS, TicketLifecycleStatus.RESOLVED, TicketLifecycleStatus.CLOSED):
+    for target in (
+        TicketLifecycleStatus.OPEN,
+        TicketLifecycleStatus.IN_PROGRESS,
+        TicketLifecycleStatus.WAITING_FOR_USER,
+        TicketLifecycleStatus.IN_PROGRESS,
+        TicketLifecycleStatus.RESOLVED,
+        TicketLifecycleStatus.CLOSED,
+    ):
         ticket = service.transition_status(ticket.ticket_id, target)
     assert ticket.status is TicketLifecycleStatus.CLOSED
 
@@ -67,7 +97,12 @@ def test_escalation_is_allowed_only_from_open_or_in_progress() -> None:
     service = TicketService(MemoryTicketStore())
     ticket = service.create_ticket(_request()).ticket
     ticket = service.transition_status(ticket.ticket_id, TicketLifecycleStatus.OPEN)
-    assert service.transition_status(ticket.ticket_id, TicketLifecycleStatus.ESCALATED).status is TicketLifecycleStatus.ESCALATED
+    assert (
+        service.transition_status(
+            ticket.ticket_id, TicketLifecycleStatus.ESCALATED
+        ).status
+        is TicketLifecycleStatus.ESCALATED
+    )
 
 
 def test_ticket_store_crud_uses_shared_mongodb_client() -> None:
@@ -79,12 +114,17 @@ def test_ticket_store_crud_uses_shared_mongodb_client() -> None:
     store = TicketStore(client)
     assert store.create(record).ticket_id == record.ticket_id
     assert store.get(record.ticket_id).ticket_id == record.ticket_id
-    assert store.update_fields(record.ticket_id, {"assigned_team": "network"}).ticket_id == record.ticket_id
+    assert (
+        store.update_fields(record.ticket_id, {"assigned_team": "network"}).ticket_id
+        == record.ticket_id
+    )
 
 
 def test_mongodb_failure_is_not_silenced() -> None:
     client = MagicMock()
-    client.get_collection.return_value.insert_one.side_effect = RuntimeError("Mongo unavailable")
+    client.get_collection.return_value.insert_one.side_effect = RuntimeError(
+        "Mongo unavailable"
+    )
     with pytest.raises(RuntimeError, match="Mongo unavailable"):
         TicketStore(client).create(TicketRecord(**_request().model_dump()))
 
@@ -108,6 +148,7 @@ def test_ticket_comments_and_service_methods() -> None:
 
     # Add comment via TicketStore with mock
     from mcp_rag_agent.it_support.tickets.models import TicketComment
+
     client = MagicMock()
     coll = client.get_collection.return_value
     coll.update_one.return_value.matched_count = 1
@@ -152,5 +193,6 @@ def test_ticket_store_queries_and_not_found_handling() -> None:
 
     # Not found on add_comment
     with pytest.raises(TicketNotFoundError):
-        store.add_comment("TKT-NONEXISTENT", TicketComment(author_id="user-1", body="test"))
-
+        store.add_comment(
+            "TKT-NONEXISTENT", TicketComment(author_id="user-1", body="test")
+        )

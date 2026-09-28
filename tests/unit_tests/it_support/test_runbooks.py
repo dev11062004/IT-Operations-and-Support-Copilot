@@ -13,11 +13,17 @@ from mcp_rag_agent.it_support.runbooks.models import (
     StepActionType,
     StepOutcome,
 )
-from mcp_rag_agent.it_support.runbooks.registry import RunbookNotFoundError, RunbookRegistry, get_default_registry
+from mcp_rag_agent.it_support.runbooks.registry import (
+    RunbookNotFoundError,
+    RunbookRegistry,
+    get_default_registry,
+)
 from mcp_rag_agent.it_support.runbooks.tools import create_runbook_tool
 
 
-def _create_sample_runbook(runbook_id: str = "rb_test_sample", version: str = "1.0.0") -> Runbook:
+def _create_sample_runbook(
+    runbook_id: str = "rb_test_sample", version: str = "1.0.0"
+) -> Runbook:
     """Helper creating a test runbook with step, retry, branching, and escalation."""
     steps = {
         "step_1": RunbookStep(
@@ -135,7 +141,9 @@ class TestRunbookSelection:
         assert rb_mfa is not None
         assert rb_mfa.runbook_id == "rb_mfa_troubleshooting"
 
-        rb_phish = registry.find_for_query("I clicked a suspicious phishing link in email")
+        rb_phish = registry.find_for_query(
+            "I clicked a suspicious phishing link in email"
+        )
         assert rb_phish is not None
         assert rb_phish.runbook_id == "rb_phishing_incident"
 
@@ -303,7 +311,9 @@ class TestStatePersistenceAndValidation:
             initial_step_id="bad_step",
             steps={"bad_step": invalid_step},
         )
-        with pytest.raises(ValueError, match="points to unknown target 'non_existent_step'"):
+        with pytest.raises(
+            ValueError, match="points to unknown target 'non_existent_step'"
+        ):
             broken_runbook.validate_graph()
 
 
@@ -319,7 +329,9 @@ class TestRunbookToolIntegration:
 
     def test_tool_start_and_evaluate_flow(self) -> None:
         tool = create_runbook_tool()
-        start_res = tool.invoke({"action": "start", "runbook_id": "rb_vpn_troubleshooting"})
+        start_res = tool.invoke(
+            {"action": "start", "runbook_id": "rb_vpn_troubleshooting"}
+        )
         assert "[RUNBOOK STARTED: rb_vpn_troubleshooting" in start_res
         assert "vpn_check_internet" in start_res
 
@@ -330,12 +342,14 @@ class TestRunbookToolIntegration:
                 break
 
         # Advance step via tool
-        eval_res = tool.invoke({
-            "action": "evaluate",
-            "execution_id": exec_id,
-            "step_outcome": "success",
-            "user_feedback": "Internet loads fine without VPN",
-        })
+        eval_res = tool.invoke(
+            {
+                "action": "evaluate",
+                "execution_id": exec_id,
+                "step_outcome": "success",
+                "user_feedback": "Internet loads fine without VPN",
+            }
+        )
         assert "[RUNBOOK ADVANCED: Step vpn_restart_service]" in eval_res
 
         # Check status via tool

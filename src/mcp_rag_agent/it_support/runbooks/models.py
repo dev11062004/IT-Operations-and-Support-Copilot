@@ -79,7 +79,9 @@ class Runbook(BaseModel):
 
     def get_step(self, step_id: str) -> RunbookStep:
         if step_id not in self.steps:
-            raise KeyError(f"Step '{step_id}' not found in runbook '{self.runbook_id}' v{self.version}")
+            raise KeyError(
+                f"Step '{step_id}' not found in runbook '{self.runbook_id}' v{self.version}"
+            )
         return self.steps[step_id]
 
     def validate_graph(self) -> None:
@@ -88,7 +90,9 @@ class Runbook(BaseModel):
         valid_targets = set(self.steps.keys()) | terminal_states
 
         if self.initial_step_id not in self.steps:
-            raise ValueError(f"initial_step_id '{self.initial_step_id}' does not exist in steps.")
+            raise ValueError(
+                f"initial_step_id '{self.initial_step_id}' does not exist in steps."
+            )
 
         for step_id, step in self.steps.items():
             for target_name, target in [

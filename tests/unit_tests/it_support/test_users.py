@@ -1,6 +1,7 @@
 """Unit tests for user context models, store, and domain service."""
 
 from unittest.mock import MagicMock
+
 import pytest
 
 from mcp_rag_agent.it_support.users.models import (

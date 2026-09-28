@@ -1,6 +1,11 @@
 """API-facing ticket service that keeps routes free of persistence logic."""
 
-from mcp_rag_agent.it_support.tickets.models import TicketCreate, TicketOperationResult, TicketPatch, TicketRecord
+from mcp_rag_agent.it_support.tickets.models import (
+    TicketCreate,
+    TicketOperationResult,
+    TicketPatch,
+    TicketRecord,
+)
 from mcp_rag_agent.it_support.tickets.service import TicketService
 
 
@@ -21,5 +26,7 @@ class ITTicketAPIService:
         if request.assigned_team is not None:
             ticket = self._ticket_service.assign_team(ticket_id, request.assigned_team)
         if request.priority is not None:
-            ticket = self._ticket_service.update_fields(ticket_id, {"priority": request.priority.value})
+            ticket = self._ticket_service.update_fields(
+                ticket_id, {"priority": request.priority.value}
+            )
         return ticket

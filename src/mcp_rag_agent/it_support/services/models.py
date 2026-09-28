@@ -13,6 +13,7 @@ def _utc_now() -> datetime:
 
 class ServiceOperationalStatus(str, Enum):
     """Operational status of a monitored synthetic enterprise service."""
+
     OPERATIONAL = "OPERATIONAL"
     DEGRADED = "DEGRADED"
     OUTAGE = "OUTAGE"

@@ -12,13 +12,16 @@ from mcp_rag_agent.mongodb import MongoDBClient
 
 class ServiceNotFoundError(KeyError):
     """Raised when a requested service status cannot be found."""
+
     pass
 
 
 class ServiceStatusStore:
     """Persistence store for enterprise service statuses in MongoDB."""
 
-    def __init__(self, mongo_client: MongoDBClient, collection_name: str = "it_service_statuses") -> None:
+    def __init__(
+        self, mongo_client: MongoDBClient, collection_name: str = "it_service_statuses"
+    ) -> None:
         self._mongo_client = mongo_client
         self._collection_name = collection_name
 

@@ -6,13 +6,31 @@ from typing import Optional
 from mcp_rag_agent.it_support.intent import ITIntentClassifier
 from mcp_rag_agent.it_support.models import ITCategory
 from mcp_rag_agent.it_support.runbooks.models import Runbook
-from mcp_rag_agent.it_support.runbooks.runbook_definitions import get_all_standard_runbooks
+from mcp_rag_agent.it_support.runbooks.runbook_definitions import (
+    get_all_standard_runbooks,
+)
 
 logger = logging.getLogger("RunbookRegistry")
 
 
+CANONICAL_ID_MAP: dict[str, str] = {
+    "RB-NET-VPN-001": "rb_vpn_troubleshooting",
+    "RB-NET-WIFI-002": "rb_wifi_troubleshooting",
+    "RB-ACC-MFA-003": "rb_mfa_troubleshooting",
+    "RB-ACC-PWD-004": "rb_password_lockout",
+    "RB-ACC-GIT-005": "rb_github_access",
+    "RB-ACC-JIR-006": "rb_jira_access",
+    "RB-SFT-OUT-007": "rb_outlook_troubleshooting",
+    "RB-HDW-PRN-008": "rb_printer_troubleshooting",
+    "RB-HDW-DSP-009": "rb_laptop_display",
+    "RB-SEC-PHS-010": "rb_phishing_incident",
+}
+REVERSE_CANONICAL_MAP: dict[str, str] = {v: k for k, v in CANONICAL_ID_MAP.items()}
+
+
 class RunbookNotFoundError(KeyError):
     """Raised when a requested runbook or version does not exist."""
+
     pass
 
 
@@ -37,17 +55,26 @@ class RunbookRegistry:
         self._runbooks[key] = runbook
         if runbook.is_active or runbook.runbook_id not in self._active_versions:
             self._active_versions[runbook.runbook_id] = runbook.version
-        logger.debug(f"[RUNBOOK_REGISTRY] Registered '{runbook.runbook_id}' v{runbook.version}")
+        logger.debug(
+            f"[RUNBOOK_REGISTRY] Registered '{runbook.runbook_id}' v{runbook.version}"
+        )
 
     def get(self, runbook_id: str, version: Optional[str] = None) -> Runbook:
-        """Retrieve a runbook by ID, resolving to the active version if version is omitted."""
-        target_version = version or self._active_versions.get(runbook_id)
+        """Retrieve a runbook by ID or canonical code, resolving to active version."""
+        resolved_id = CANONICAL_ID_MAP.get(runbook_id, runbook_id)
+        target_version = version or self._active_versions.get(resolved_id)
         if not target_version:
             raise RunbookNotFoundError(f"Runbook '{runbook_id}' is not registered.")
-        key = (runbook_id, target_version)
+        key = (resolved_id, target_version)
         if key not in self._runbooks:
-            raise RunbookNotFoundError(f"Runbook '{runbook_id}' version '{target_version}' not found.")
+            raise RunbookNotFoundError(
+                f"Runbook '{runbook_id}' version '{target_version}' not found."
+            )
         return self._runbooks[key]
+
+    def get_canonical_id(self, runbook_id: str) -> str:
+        """Resolve internal runbook_id to standard enterprise canonical code (e.g. RB-NET-VPN-001)."""
+        return REVERSE_CANONICAL_MAP.get(runbook_id, runbook_id)
 
     def list_active(self) -> list[Runbook]:
         """List all currently active runbooks."""
@@ -61,7 +88,9 @@ class RunbookRegistry:
         """Return all active runbooks matching an ITCategory."""
         return [rb for rb in self.list_active() if rb.category == category]
 
-    def find_for_query(self, query: str, category: Optional[ITCategory] = None) -> Optional[Runbook]:
+    def find_for_query(
+        self, query: str, category: Optional[ITCategory] = None
+    ) -> Optional[Runbook]:
         """Select the most appropriate runbook following User issue -> IT Intent -> Runbook selection."""
         lowered = query.lower()
         normalized = lowered.replace("-", " ")

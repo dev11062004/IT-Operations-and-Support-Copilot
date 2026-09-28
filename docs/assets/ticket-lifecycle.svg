@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 320" width="100%" height="100%">
+    <style>
+        .box { rx: 8; stroke-width: 1.5; }
+        .title { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 700; }
+        .subtitle { font-family: system-ui, -apple-system, sans-serif; font-size: 11px; font-weight: 400; }
+        @media (prefers-color-scheme: dark) {
+            .bg { fill: #0b0f19; }
+            .node-new { fill: #1e1b4b; stroke: #6366f1; }
+            .node-open { fill: #172554; stroke: #3b82f6; }
+            .node-prog { fill: #0f2e2e; stroke: #14b8a6; }
+            .node-wait { fill: #431407; stroke: #f97316; }
+            .node-res { fill: #064e3b; stroke: #10b981; }
+            .node-close { fill: #1e293b; stroke: #64748b; }
+            .node-esc { fill: #450a0a; stroke: #ef4444; }
+            .text-main { fill: #f9fafb; }
+            .text-sub { fill: #9ca3af; }
+            .arrow-line { stroke: #6b7280; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        }
+        @media (prefers-color-scheme: light) {
+            .bg { fill: #f8fafc; }
+            .node-new { fill: #eef2ff; stroke: #4f46e5; }
+            .node-open { fill: #eff6ff; stroke: #2563eb; }
+            .node-prog { fill: #f0fdfa; stroke: #0d9488; }
+            .node-wait { fill: #fff7ed; stroke: #ea580c; }
+            .node-res { fill: #ecfdf5; stroke: #059669; }
+            .node-close { fill: #f1f5f9; stroke: #64748b; }
+            .node-esc { fill: #fef2f2; stroke: #dc2626; }
+            .text-main { fill: #0f172a; }
+            .text-sub { fill: #475569; }
+            .arrow-line { stroke: #94a3b8; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        }
+    </style>
+    <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#64748b" />
+        </marker>
+    </defs>
+    <rect width="880" height="320" class="bg" rx="12" />
+
+    <text x="30" y="36" font-family="system-ui, sans-serif" font-size="18" font-weight="800" class="text-main">Deterministic Ticket Lifecycle State Machine</text>
+    <text x="30" y="56" font-family="system-ui, sans-serif" font-size="12" font-weight="500" class="text-sub">Enforced by TicketService domain rules: illegal transitions rejected with InvalidTicketTransitionError</text>
+
+    <!-- Row 1: Main Lifecycle -->
+    <!-- NEW -->
+    <rect x="30" y="100" width="105" height="70" class="node-new box" />
+    <text x="82" y="132" text-anchor="middle" class="title text-main">NEW</text>
+    <text x="82" y="150" text-anchor="middle" class="subtitle text-sub">Created</text>
+
+    <line x1="135" y1="135" x2="165" y2="135" class="arrow-line" />
+
+    <!-- OPEN -->
+    <rect x="170" y="100" width="105" height="70" class="node-open box" />
+    <text x="222" y="132" text-anchor="middle" class="title text-main">OPEN</text>
+    <text x="222" y="150" text-anchor="middle" class="subtitle text-sub">Triaged</text>
+
+    <line x1="275" y1="135" x2="305" y2="135" class="arrow-line" />
+
+    <!-- IN_PROGRESS -->
+    <rect x="310" y="100" width="125" height="70" class="node-prog box" />
+    <text x="372" y="132" text-anchor="middle" class="title text-main">IN_PROGRESS</text>
+    <text x="372" y="150" text-anchor="middle" class="subtitle text-sub">Troubleshooting</text>
+
+    <line x1="435" y1="135" x2="465" y2="135" class="arrow-line" />
+
+    <!-- WAITING_FOR_USER -->
+    <rect x="470" y="100" width="145" height="70" class="node-wait box" />
+    <text x="542" y="132" text-anchor="middle" class="title text-main">WAITING_FOR_USER</text>
+    <text x="542" y="150" text-anchor="middle" class="subtitle text-sub">Feedback Required</text>
+
+    <!-- Back loop from Waiting to In Progress -->
+    <path d="M 542 170 L 542 195 L 372 195 L 372 170" class="arrow-line" />
+
+    <line x1="615" y1="135" x2="645" y2="135" class="arrow-line" />
+
+    <!-- RESOLVED -->
+    <rect x="650" y="100" width="100" height="70" class="node-res box" />
+    <text x="700" y="132" text-anchor="middle" class="title text-main">RESOLVED</text>
+    <text x="700" y="150" text-anchor="middle" class="subtitle text-sub">Fixed</text>
+
+    <line x1="750" y1="135" x2="775" y2="135" class="arrow-line" />
+
+    <!-- CLOSED -->
+    <rect x="780" y="100" width="80" height="70" class="node-close box" />
+    <text x="820" y="132" text-anchor="middle" class="title text-main">CLOSED</text>
+    <text x="820" y="150" text-anchor="middle" class="subtitle text-sub">Archived</text>
+
+    <!-- ESCALATED Branch -->
+    <path d="M 222 170 L 222 245 L 285 245" class="arrow-line" />
+    <path d="M 372 170 L 372 245 L 285 245" class="arrow-line" />
+    <rect x="290" y="215" width="180" height="65" class="node-esc box" />
+    <text x="380" y="244" text-anchor="middle" class="title text-main">ESCALATED</text>
+    <text x="380" y="262" text-anchor="middle" class="subtitle text-sub">Allowed only from OPEN/IN_PROGRESS</text>
+</svg>

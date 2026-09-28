@@ -15,7 +15,11 @@ from mcp_rag_agent.it_support.runbooks.models import (
     StepExecutionResult,
     StepOutcome,
 )
-from mcp_rag_agent.it_support.runbooks.registry import RunbookNotFoundError, RunbookRegistry, get_default_registry
+from mcp_rag_agent.it_support.runbooks.registry import (
+    RunbookNotFoundError,
+    RunbookRegistry,
+    get_default_registry,
+)
 
 logger = logging.getLogger("RunbookExecutor")
 
@@ -52,7 +56,9 @@ class RunbookExecutor:
         runbook_id = state_dict["runbook_id"]
         version = state_dict.get("runbook_version", "1.0.0")
         current_step_id = state_dict.get("current_step_id")
-        status_val = RunbookStatus(state_dict.get("status", RunbookStatus.IN_PROGRESS.value))
+        status_val = RunbookStatus(
+            state_dict.get("status", RunbookStatus.IN_PROGRESS.value)
+        )
 
         expected = state_dict.get("expected_outcome")
         if not expected and current_step_id:
@@ -64,7 +70,9 @@ class RunbookExecutor:
                 pass
 
         return StepExecutionResult(
-            execution_id=state_dict.get("execution_id", state_dict.get("thread_id", "")),
+            execution_id=state_dict.get(
+                "execution_id", state_dict.get("thread_id", "")
+            ),
             runbook_id=runbook_id,
             runbook_version=version,
             step_id=current_step_id,
@@ -128,9 +136,13 @@ class RunbookExecutor:
                 f"Cannot advance execution '{execution_id}': runbook has already reached terminal status '{current_values.get('status')}'."
             )
 
-        outcome_val = outcome.value if isinstance(outcome, StepOutcome) else str(outcome).lower()
+        outcome_val = (
+            outcome.value if isinstance(outcome, StepOutcome) else str(outcome).lower()
+        )
         if outcome_val not in {o.value for o in StepOutcome}:
-            raise ValueError(f"Invalid outcome '{outcome}'. Must be one of {[o.value for o in StepOutcome]}.")
+            raise ValueError(
+                f"Invalid outcome '{outcome}'. Must be one of {[o.value for o in StepOutcome]}."
+            )
 
         update_payload: dict[str, Any] = {
             "step_outcome": outcome_val,

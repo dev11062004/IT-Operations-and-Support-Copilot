@@ -1,7 +1,11 @@
 """Safe synthetic enterprise troubleshooting runbook definitions."""
 
 from mcp_rag_agent.it_support.models import ITCategory
-from mcp_rag_agent.it_support.runbooks.models import Runbook, RunbookStep, StepActionType
+from mcp_rag_agent.it_support.runbooks.models import (
+    Runbook,
+    RunbookStep,
+    StepActionType,
+)
 
 
 def create_vpn_runbook() -> Runbook:
@@ -361,7 +365,14 @@ def create_jira_runbook() -> Runbook:
         version="1.0.0",
         initial_step_id="jira_check_okta",
         steps=steps,
-        tags=["jira", "confluence", "atlassian", "access", "permissions", "collaboration"],
+        tags=[
+            "jira",
+            "confluence",
+            "atlassian",
+            "access",
+            "permissions",
+            "collaboration",
+        ],
         escalation_team="IT Applications Support",
     )
 
@@ -619,7 +630,15 @@ def create_phishing_incident_runbook() -> Runbook:
         version="1.0.0",
         initial_step_id="sec_disconnect_network",
         steps=steps,
-        tags=["security", "phishing", "malware", "incident", "breach", "compromise", "soc"],
+        tags=[
+            "security",
+            "phishing",
+            "malware",
+            "incident",
+            "breach",
+            "compromise",
+            "soc",
+        ],
         escalation_team="Security Operations Center (SOC) IR",
     )
 

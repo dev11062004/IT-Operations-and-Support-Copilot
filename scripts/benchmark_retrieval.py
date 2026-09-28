@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from mcp_rag_agent.core.config import config
 from mcp_rag_agent.retrieval.pipeline import AdvancedRetriever
-from mcp_rag_agent.retrieval.reranker import NoOpReranker, CrossEncoderReranker
+from mcp_rag_agent.retrieval.reranker import CrossEncoderReranker, NoOpReranker
 
 
 def create_mock_retrieval_environment(num_documents: int = 50):
@@ -32,13 +32,17 @@ def create_mock_retrieval_environment(num_documents: int = 50):
                 "filename": "Company_Policy.docx",
                 "section": f"Section {i // 5}",
                 "page_number": (i // 10) + 1,
-            }
+            },
         }
         for i in range(num_documents)
     ]
 
-    mock_mongo.vector_search.side_effect = lambda **kwargs: mock_docs[:kwargs.get("limit", 10)]
-    mock_mongo.text_search.side_effect = lambda **kwargs: mock_docs[:kwargs.get("limit", 10)]
+    mock_mongo.vector_search.side_effect = lambda **kwargs: mock_docs[
+        : kwargs.get("limit", 10)
+    ]
+    mock_mongo.text_search.side_effect = lambda **kwargs: mock_docs[
+        : kwargs.get("limit", 10)
+    ]
 
     return mock_mongo, mock_emb
 
@@ -74,7 +78,9 @@ async def run_baseline_search(mock_mongo, mock_emb, query: str, top_k: int) -> f
     return t_total
 
 
-async def run_advanced_search(retriever: AdvancedRetriever, query: str, top_k: int) -> tuple[float, dict]:
+async def run_advanced_search(
+    retriever: AdvancedRetriever, query: str, top_k: int
+) -> tuple[float, dict]:
     """Run advanced retrieval pipeline with over-fetching, RRF fusion, and metrics."""
     result = await retriever.retrieve(query=query, top_k=top_k, debug=True)
     return result.latency.total_latency_ms, result.latency.model_dump()
@@ -108,7 +114,9 @@ async def main():
     advanced_latencies: list[float] = []
     stage_breakdowns: list[dict] = []
 
-    print(f"\nRunning {num_iterations} benchmark iterations across {len(queries)} queries...")
+    print(
+        f"\nRunning {num_iterations} benchmark iterations across {len(queries)} queries..."
+    )
 
     for i in range(num_iterations):
         q = queries[i % len(queries)]
@@ -149,20 +157,36 @@ async def main():
     print("=" * 70)
     print(f"{'Metric':<25} | {'Baseline Retrieval':<18} | {'Advanced Retrieval':<18}")
     print("-" * 70)
-    print(f"{'Mean Latency':<25} | {base_stats['mean']:>14.2f} ms | {adv_stats['mean']:>14.2f} ms")
-    print(f"{'P50 (Median)':<25} | {base_stats['p50']:>14.2f} ms | {adv_stats['p50']:>14.2f} ms")
-    print(f"{'P90 Percentile':<25} | {base_stats['p90']:>14.2f} ms | {adv_stats['p90']:>14.2f} ms")
-    print(f"{'P99 Percentile':<25} | {base_stats['p99']:>14.2f} ms | {adv_stats['p99']:>14.2f} ms")
+    print(
+        f"{'Mean Latency':<25} | {base_stats['mean']:>14.2f} ms | {adv_stats['mean']:>14.2f} ms"
+    )
+    print(
+        f"{'P50 (Median)':<25} | {base_stats['p50']:>14.2f} ms | {adv_stats['p50']:>14.2f} ms"
+    )
+    print(
+        f"{'P90 Percentile':<25} | {base_stats['p90']:>14.2f} ms | {adv_stats['p90']:>14.2f} ms"
+    )
+    print(
+        f"{'P99 Percentile':<25} | {base_stats['p99']:>14.2f} ms | {adv_stats['p99']:>14.2f} ms"
+    )
     print("-" * 70)
 
     print("\nADVANCED RETRIEVAL STAGE LATENCY BREAKDOWN (Average)")
     print("-" * 70)
-    print(f"1. Query Preprocessing & Normalization: {avg_stages['query_preprocessing_ms']:.2f} ms")
-    print(f"2. Vector Search (Over-fetched 3x):     {avg_stages['vector_search_ms']:.2f} ms")
-    print(f"3. Keyword Search (Over-fetched 3x):    {avg_stages['keyword_search_ms']:.2f} ms")
+    print(
+        f"1. Query Preprocessing & Normalization: {avg_stages['query_preprocessing_ms']:.2f} ms"
+    )
+    print(
+        f"2. Vector Search (Over-fetched 3x):     {avg_stages['vector_search_ms']:.2f} ms"
+    )
+    print(
+        f"3. Keyword Search (Over-fetched 3x):    {avg_stages['keyword_search_ms']:.2f} ms"
+    )
     print(f"4. RRF Fusion & Deduplication:         {avg_stages['fusion_ms']:.2f} ms")
     print(f"5. Reranker Evaluation (NoOp):          {avg_stages['rerank_ms']:.2f} ms")
-    print(f"-> Total End-to-End Latency:           {avg_stages['total_latency_ms']:.2f} ms")
+    print(
+        f"-> Total End-to-End Latency:           {avg_stages['total_latency_ms']:.2f} ms"
+    )
     print("=" * 70)
 
 

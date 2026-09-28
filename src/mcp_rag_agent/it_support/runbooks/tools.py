@@ -23,27 +23,27 @@ class RunbookToolInput(BaseModel):
     )
     query: Optional[str] = Field(
         default=None,
-        description="User's IT problem description (used to automatically select the appropriate runbook if runbook_id is omitted)."
+        description="User's IT problem description (used to automatically select the appropriate runbook if runbook_id is omitted).",
     )
     runbook_id: Optional[str] = Field(
         default=None,
-        description="Explicit runbook ID to execute (e.g., 'rb_vpn_troubleshooting', 'rb_wifi_troubleshooting')."
+        description="Explicit runbook ID to execute (e.g., 'rb_vpn_troubleshooting', 'rb_wifi_troubleshooting').",
     )
     execution_id: Optional[str] = Field(
         default=None,
-        description="Active execution identifier from a previous start or evaluate call. Required for 'evaluate' and 'status'."
+        description="Active execution identifier from a previous start or evaluate call. Required for 'evaluate' and 'status'.",
     )
     step_outcome: Optional[Literal["success", "failure", "retry", "escalate"]] = Field(
         default=None,
-        description="Result of attempting the current step: 'success' if it worked, 'failure' if it didn't, 'retry' to re-attempt, or 'escalate' to stop and escalate."
+        description="Result of attempting the current step: 'success' if it worked, 'failure' if it didn't, 'retry' to re-attempt, or 'escalate' to stop and escalate.",
     )
     user_feedback: Optional[str] = Field(
         default=None,
-        description="Optional diagnostic observations, error messages, or user comments from the step attempt."
+        description="Optional diagnostic observations, error messages, or user comments from the step attempt.",
     )
     branch_choice: Optional[str] = Field(
         default=None,
-        description="Optional explicit branch choice if the step defined conditional branching options."
+        description="Optional explicit branch choice if the step defined conditional branching options.",
     )
 
 
@@ -66,7 +66,12 @@ def create_runbook_tool(executor: Optional[RunbookExecutor] = None) -> Structure
             if action == "list":
                 runbooks = active_executor.registry.list_active()
                 items = [
-                    {"runbook_id": rb.runbook_id, "title": rb.title, "category": rb.category.value, "tags": rb.tags}
+                    {
+                        "runbook_id": rb.runbook_id,
+                        "title": rb.title,
+                        "category": rb.category.value,
+                        "tags": rb.tags,
+                    }
                     for rb in runbooks
                 ]
                 return f"[AVAILABLE RUNBOOKS]\n{json.dumps(items, indent=2)}"

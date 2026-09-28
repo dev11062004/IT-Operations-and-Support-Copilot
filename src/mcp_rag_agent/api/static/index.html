@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Knowledge Assistant | MCP RAG</title>
-    <meta name="description" content="Production Enterprise Conversational RAG Assistant with persistent memory, source citations, and grounding guardrails.">
-    <!-- Fonts -->
+    <title>Enterprise Knowledge Assistant | IT Operations & Support Copilot</title>
+
+    <meta name="description" content="Production Enterprise IT Operations & Support Copilot with stateful troubleshooting runbooks, ticket lifecycle, incident management, RBAC security, and evaluation analytics.">
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -19,12 +20,14 @@
                 <div class="brand">
                     <div class="brand-icon">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
                         </svg>
                     </div>
                     <div class="brand-text">
-                        <span class="brand-title">Knowledge AI</span>
-                        <span class="brand-badge">ENTERPRISE RAG</span>
+                        <span class="brand-title">IT Ops Copilot</span>
+                        <span class="brand-badge" id="sidebarRoleBadge">EMPLOYEE</span>
                     </div>
                 </div>
                 <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close Sidebar">
@@ -35,19 +38,63 @@
                 </button>
             </div>
 
+            <!-- Role Selector -->
+            <div class="role-selector-card">
+                <label class="role-label" for="activeRoleSelect">Active Enterprise Role</label>
+                <div class="select-wrapper">
+                    <select id="activeRoleSelect" class="role-dropdown">
+                        <option value="employee" selected>Employee (Self-Service)</option>
+                        <option value="it_support">IT Support (Tier 1/2)</option>
+                        <option value="it_admin">IT Administrator</option>
+                        <option value="security_analyst">Security Analyst</option>
+                        <option value="system_admin">System Administrator</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Platform View Navigation -->
+            <div class="platform-nav">
+                <div class="sidebar-section-header">
+                    <span>PLATFORM VIEWS</span>
+                </div>
+                <nav class="nav-links" id="platformNavLinks">
+                    <button class="nav-item active" data-view="chat-view" id="navChatBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>IT Support Assistant</span>
+                    </button>
+                    <button class="nav-item admin-only" data-view="dashboard-view" id="navDashboardBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                        <span>Admin Operations</span>
+                    </button>
+                    <button class="nav-item support-only" data-view="tickets-view" id="navTicketsBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <span>Support Queue</span>
+                    </button>
+                    <button class="nav-item support-only" data-view="incidents-view" id="navIncidentsBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Incident Center</span>
+                    </button>
+                    <button class="nav-item admin-only" data-view="evaluation-view" id="navEvalBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span>Evaluation & Quality</span>
+                    </button>
+                    <button class="nav-item security-only" data-view="audit-view" id="navAuditBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <span>Security & Audit Logs</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Conversations Section -->
             <div class="sidebar-actions">
-                <button class="btn-new-chat" id="newChatBtn" title="Start a fresh conversation thread">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    <span>New Conversation</span>
-                    <span class="kbd-hint">⌘K</span>
+                <button class="btn-new-chat" id="newChatBtn" title="Start a fresh troubleshooting session">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>New Ticket / Session</span>
                 </button>
             </div>
 
             <div class="sidebar-section-header">
-                <span>CONVERSATIONS</span>
+                <span>ACTIVE SESSIONS</span>
                 <span class="thread-count" id="threadCountBadge">0</span>
             </div>
 
@@ -61,16 +108,9 @@
                 <div class="status-summary" id="systemStatusTrigger" title="Click to view deep system diagnostics">
                     <span class="status-dot status-operational" id="sidebarStatusDot"></span>
                     <div class="status-info">
-                        <span class="status-label" id="sidebarStatusText">Checking Status...</span>
-                        <span class="status-sub">MongoDB & LLM</span>
+                        <span class="status-label" id="sidebarStatusText">Operational</span>
+                        <span class="status-sub">IT & Security Core</span>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </div>
-                <div class="footer-meta">
-                    <span>MCP RAG v0.1.0</span>
-                    <a href="/docs" target="_blank" rel="noopener noreferrer" class="link-docs">OpenAPI Docs</a>
                 </div>
             </div>
         </aside>
@@ -81,183 +121,420 @@
             <header class="app-header">
                 <div class="header-left">
                     <button class="btn-icon mobile-menu-btn" id="mobileMenuBtn" aria-label="Open Navigation">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
                     <div class="active-thread-details">
-                        <h1 class="header-title" id="activeThreadTitle">Policy Knowledge Base</h1>
-                        <span class="thread-id-tag" id="activeThreadIdTag">Loading thread...</span>
+                        <h1 class="header-title" id="activeViewTitle">IT Support Copilot</h1>
+                        <span class="thread-id-tag" id="activeThreadIdTag">Employee Self-Service</span>
                     </div>
                 </div>
 
                 <div class="header-right">
-                    <button class="status-pill" id="headerStatusPill" title="Click for diagnostic readiness details">
+                    <div class="incident-alert-banner hidden" id="incidentAlertBanner">
+                        <span class="alert-icon">⚠️</span>
+                        <span class="alert-text" id="incidentAlertText">Active Incident: VPN Gateway degraded</span>
+                    </div>
+
+                    <button class="status-pill" id="headerStatusPill">
                         <span class="pulse-indicator status-operational" id="headerStatusDot"></span>
-                        <span class="status-pill-text" id="headerStatusText">Operational</span>
+                        <span class="status-pill-text" id="headerStatusText">All Systems Live</span>
                     </button>
 
                     <button class="btn-header-action" id="headerClearBtn" title="Clear current dialogue history">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         <span>Clear</span>
                     </button>
                 </div>
             </header>
 
-            <!-- Messages Stream Area -->
-            <div class="messages-viewport" id="messagesViewport">
-                <!-- Empty State Hero (shown when 0 messages) -->
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-hero-icon">
-                        <div class="hero-icon-glow"></div>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            <path d="M9 12l2 2 4-4"/>
-                        </svg>
+            <!-- VIEW 1: Chat / Troubleshooting View -->
+            <div class="view-panel active-view" id="chat-view">
+                <!-- Troubleshooting Runbook Step Tracker Widget (Phase 13-F Employee UI) -->
+                <div class="troubleshooting-tracker-card hidden" id="runbookTrackerCard">
+                    <div class="tracker-header">
+                        <div class="tracker-title-group">
+                            <span class="tracker-badge">ACTIVE RUNBOOK</span>
+                            <h4 id="trackerRunbookTitle">Corporate VPN Troubleshooting (RB-NET-VPN-001)</h4>
+                        </div>
+                        <span class="step-progress-badge" id="trackerStepProgress">Step 2 of 5</span>
                     </div>
-
-                    <h2 class="empty-title">Enterprise Knowledge Assistant</h2>
-                    <p class="empty-subtitle">
-                        Ask questions regarding official Company XYZ operational policies. Every answer is synthesized strictly from indexed documents with verifiable citations and anti-hallucination guardrails.
-                    </p>
-
-                    <div class="system-features-row">
-                        <div class="feature-chip">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                            <span>Grounded Citations</span>
+                    <div class="tracker-body">
+                        <div class="tracker-action-row">
+                            <span class="action-label">Current Action:</span>
+                            <span class="action-desc" id="trackerCurrentAction">Restart Corporate VPN Client Service</span>
                         </div>
-                        <div class="feature-chip">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 14 14"></polyline>
-                            </svg>
-                            <span>Hybrid Search (RRF)</span>
+                        <div class="tracker-step-history" id="trackerStepHistory">
+                            <div class="step-chip completed">✓ 1. Verify Local Internet Connectivity</div>
                         </div>
-                        <div class="feature-chip">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                            </svg>
-                            <span>Persistent Session Memory</span>
+                        <div class="tracker-next-row">
+                            <span class="next-label">Next Action:</span>
+                            <span class="next-desc" id="trackerNextAction">Connect to Corporate Gateway</span>
                         </div>
-                        <div class="feature-chip">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            </svg>
-                            <span>Zero Chain-of-Thought Safe</span>
-                        </div>
-                    </div>
-
-                    <div class="starter-prompts-grid">
-                        <button class="starter-card" data-prompt="In the UK, how many days of annual leave do full-time employees receive?">
-                            <div class="starter-icon leave-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                            </div>
-                            <div class="starter-content">
-                                <span class="starter-title">Annual Leave Policy</span>
-                                <span class="starter-desc">What is the UK holiday entitlement and carryover limit?</span>
-                            </div>
-                        </button>
-
-                        <button class="starter-card" data-prompt="What is the daily meal allowance when traveling away from the office on business?">
-                            <div class="starter-icon expense-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                </svg>
-                            </div>
-                            <div class="starter-content">
-                                <span class="starter-title">Expense Reimbursements</span>
-                                <span class="starter-desc">Meal allowances and receipt submission deadlines.</span>
-                            </div>
-                        </button>
-
-                        <button class="starter-card" data-prompt="Can employees work remotely for up to 3 days a week without manager approval?">
-                            <div class="starter-icon remote-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                                </svg>
-                            </div>
-                            <div class="starter-content">
-                                <span class="starter-title">Remote Working Rules</span>
-                                <span class="starter-desc">Hybrid work eligibility and manager pre-approvals.</span>
-                            </div>
-                        </button>
-
-                        <button class="starter-card" data-prompt="What are the minimum length and rotation requirements for company passwords?">
-                            <div class="starter-icon security-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                </svg>
-                            </div>
-                            <div class="starter-content">
-                                <span class="starter-title">IT & Security Standards</span>
-                                <span class="starter-desc">Password complexity, laptop locks, and incident reporting.</span>
-                            </div>
-                        </button>
                     </div>
                 </div>
 
-                <!-- Dialogue Container -->
-                <div class="dialogue-list" id="dialogueList"></div>
-
-                <!-- Loading Typing State -->
-                <div class="loading-state hidden" id="loadingState">
-                    <div class="assistant-avatar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                    </div>
-                    <div class="loading-bubble">
-                        <div class="typing-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                <!-- Messages Stream Area -->
+                <div class="messages-viewport" id="messagesViewport">
+                    <!-- Empty State Hero -->
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-hero-icon">
+                            <div class="hero-icon-glow"></div>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                         </div>
-                        <span class="loading-label" id="loadingStatusLabel">Retrieving policy context & synthesizing answer...</span>
+
+                        <h2 class="empty-title">Enterprise IT Operations & Support Copilot</h2>
+                        <p class="empty-subtitle">
+                            Automated diagnostics, runbook guided troubleshooting, policy RAG, and ticket lifecycle workflows with role-based access control.
+                        </p>
+
+                        <div class="system-features-row">
+                            <div class="feature-chip"><span>⚡ 10 Stateful Runbooks</span></div>
+                            <div class="feature-chip"><span>🎫 Automated Ticketing</span></div>
+                            <div class="feature-chip"><span>🛡️ RBAC Guardrails</span></div>
+                            <div class="feature-chip"><span>📊 Evaluation Engine</span></div>
+                        </div>
+
+                        <div class="starter-prompts-grid">
+                            <button class="starter-card" data-prompt="My corporate VPN is failing to connect with gateway timeout error.">
+                                <div class="starter-content">
+                                    <span class="starter-title">VPN Connection Issue</span>
+                                    <span class="starter-desc">Runbook diagnosis for VPN gateway and certificate failures.</span>
+                                </div>
+                            </button>
+
+                            <button class="starter-card" data-prompt="How do I request write access to the company GitHub repositories?">
+                                <div class="starter-content">
+                                    <span class="starter-title">GitHub Access Request</span>
+                                    <span class="starter-desc">Manager approval workflow for developer tooling access.</span>
+                                </div>
+                            </button>
+
+                            <button class="starter-card" data-prompt="My MFA prompt on Okta is expired and not sending push notifications.">
+                                <div class="starter-content">
+                                    <span class="starter-title">MFA & 2FA Reset</span>
+                                    <span class="starter-desc">Authenticator app sync and hardware token replacement.</span>
+                                </div>
+                            </button>
+
+                            <button class="starter-card" data-prompt="I received an email asking for my credentials with a suspicious attachment.">
+                                <div class="starter-content">
+                                    <span class="starter-title">Report Phishing Email</span>
+                                    <span class="starter-desc">Security incident containment and mailbox quarantine.</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dialogue Container -->
+                    <div class="dialogue-list" id="dialogueList"></div>
+
+                    <!-- Loading Typing State -->
+                    <div class="loading-state hidden" id="loadingState">
+                        <div class="assistant-avatar">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        </div>
+                        <div class="loading-bubble">
+                            <div class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="loading-label" id="loadingStatusLabel">Diagnosing issue & executing runbook...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Bar -->
+                <footer class="app-footer">
+                    <form class="chat-form" id="chatForm">
+                        <div class="input-wrapper">
+                            <textarea
+                                id="queryInput"
+                                class="query-textarea"
+                                placeholder="Describe your IT issue, request access, or report an incident..."
+                                rows="1"
+                                maxlength="4000"
+                                required
+                            ></textarea>
+                            <button type="submit" class="btn-send" id="sendBtn" aria-label="Send query">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="footer-caption">
+                        <span>IT Support Copilot • Deterministic Runbooks • Verifiable Citations • Zero Hallucination</span>
+                    </div>
+                </footer>
+            </div>
+
+            <!-- VIEW 2: Admin Operations Dashboard -->
+            <div class="view-panel" id="dashboard-view">
+                <div class="admin-view-container">
+                    <div class="view-header-bar">
+                        <h2>IT Operations Overview</h2>
+                        <button class="btn-secondary" id="refreshDashboardBtn">🔄 Refresh KPIs</button>
+                    </div>
+
+                    <!-- Operational KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <span class="kpi-title">Open Tickets</span>
+                            <span class="kpi-value" id="kpiOpenTickets">0</span>
+                            <span class="kpi-subtitle">Active Support Queue</span>
+                        </div>
+                        <div class="kpi-card danger">
+                            <span class="kpi-title">Critical Incidents</span>
+                            <span class="kpi-value" id="kpiCriticalIncidents">0</span>
+                            <span class="kpi-subtitle">Sev-1 Outages</span>
+                        </div>
+                        <div class="kpi-card warning">
+                            <span class="kpi-title">Active Outages</span>
+                            <span class="kpi-value" id="kpiActiveIncidents">0</span>
+                            <span class="kpi-subtitle">Services Investigating</span>
+                        </div>
+                        <div class="kpi-card success">
+                            <span class="kpi-title">AI Resolutions</span>
+                            <span class="kpi-value" id="kpiAiResolutions">0</span>
+                            <span class="kpi-subtitle">Auto-resolved via Runbook</span>
+                        </div>
+                        <div class="kpi-card">
+                            <span class="kpi-title">AI Escalations</span>
+                            <span class="kpi-value" id="kpiAiEscalations">0</span>
+                            <span class="kpi-subtitle">Routed to Tier 2/3</span>
+                        </div>
+                        <div class="kpi-card">
+                            <span class="kpi-title">Avg Resolution Time</span>
+                            <span class="kpi-value" id="kpiAvgTime">4.2m</span>
+                            <span class="kpi-subtitle">SLA: &lt; 15 mins</span>
+                        </div>
+                    </div>
+
+                    <!-- Performance & Latency Analytics -->
+                    <div class="dashboard-section-grid">
+                        <div class="dash-card">
+                            <h3>Performance & SLA Telemetry</h3>
+                            <div class="stat-rows">
+                                <div class="stat-row">
+                                    <span>Avg Retrieval Latency:</span>
+                                    <span class="stat-val font-mono" id="statRetLatency">15.2 ms</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Avg Model Latency:</span>
+                                    <span class="stat-val font-mono" id="statModelLatency">120.5 ms</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>End-to-End Latency:</span>
+                                    <span class="stat-val font-mono" id="statTotalLatency">135.7 ms</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Avg Tokens / Query:</span>
+                                    <span class="stat-val font-mono" id="statTokens">305</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Estimated Cost / Query:</span>
+                                    <span class="stat-val font-mono" id="statCost">$0.0008</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dash-card">
+                            <h3>Ticket Category Breakdown</h3>
+                            <div class="category-pills-list" id="categoryDistributionList">
+                                <div class="cat-bar-item"><span>NETWORK</span><span class="badge">12</span></div>
+                                <div class="cat-bar-item"><span>ACCESS</span><span class="badge">8</span></div>
+                                <div class="cat-bar-item"><span>HARDWARE</span><span class="badge">5</span></div>
+                                <div class="cat-bar-item"><span>SECURITY</span><span class="badge">3</span></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Input Bar -->
-            <footer class="app-footer">
-                <form class="chat-form" id="chatForm">
-                    <div class="input-wrapper">
-                        <textarea 
-                            id="queryInput" 
-                            class="query-textarea" 
-                            placeholder="Ask a question about company policies, leave, expenses, security..." 
-                            rows="1" 
-                            maxlength="4000"
-                            required
-                        ></textarea>
-                        <button type="submit" class="btn-send" id="sendBtn" aria-label="Send query">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
+            <!-- VIEW 3: Support Queue & Ticket Management -->
+            <div class="view-panel" id="tickets-view">
+                <div class="admin-view-container">
+                    <div class="view-header-bar">
+                        <h2>Support Ticket Queue</h2>
+                        <div class="filter-controls">
+                            <select id="ticketStatusFilter" class="filter-dropdown">
+                                <option value="">All Statuses</option>
+                                <option value="new">New</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="escalated">Escalated</option>
+                            </select>
+                            <select id="ticketPriorityFilter" class="filter-dropdown">
+                                <option value="">All Priorities</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                            <button class="btn-secondary" id="refreshTicketsBtn">Refresh</button>
+                        </div>
                     </div>
-                </form>
-                <div class="footer-caption">
-                    <span>Company XYZ Confidential • Grounded in Official Policy Repository • Zero Chain-of-Thought</span>
+
+                    <div class="table-card">
+                        <table class="data-table" id="ticketsTable">
+                            <thead>
+                                <tr>
+                                    <th>Ticket ID</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Requester</th>
+                                    <th>Assigned Team</th>
+                                    <th>Updated</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketsTableBody">
+                                <tr><td colspan="9" class="table-empty">Loading tickets...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </footer>
+            </div>
+
+            <!-- VIEW 4: Incident Center -->
+            <div class="view-panel" id="incidents-view">
+                <div class="admin-view-container">
+                    <div class="view-header-bar">
+                        <h2>Service Incidents & Outages</h2>
+                        <button class="btn-secondary" id="refreshIncidentsBtn">Refresh Incidents</button>
+                    </div>
+
+                    <div class="incidents-grid" id="incidentsGrid">
+                        <div class="empty-incidents">Loading active incidents...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 5: Evaluation & Quality Benchmarks -->
+            <div class="view-panel" id="evaluation-view">
+                <div class="admin-view-container">
+                    <div class="view-header-bar">
+                        <div>
+                            <h2>Evaluation & Benchmark Dashboard</h2>
+                            <span class="subtext" id="evalBenchmarkSubtitle">Benchmark: v1_it_support_benchmark (105 Cases)</span>
+                        </div>
+                        <button class="btn-secondary" id="refreshEvalBtn">Refresh Metrics</button>
+                    </div>
+
+                    <div class="eval-metrics-grid">
+                        <div class="eval-gauge-card">
+                            <span class="gauge-label">Intent Accuracy</span>
+                            <span class="gauge-value" id="evalIntentAcc">83.8%</span>
+                            <span class="gauge-desc">12 IT intent classes</span>
+                        </div>
+                        <div class="eval-gauge-card">
+                            <span class="gauge-label">Runbook Selection</span>
+                            <span class="gauge-value" id="evalRunbookAcc">84.4%</span>
+                            <span class="gauge-desc">Deterministic graph</span>
+                        </div>
+                        <div class="eval-gauge-card">
+                            <span class="gauge-label">Runbook Completion</span>
+                            <span class="gauge-value" id="evalRunbookComp">80.0%</span>
+                            <span class="gauge-desc">End-to-end resolution</span>
+                        </div>
+                        <div class="eval-gauge-card">
+                            <span class="gauge-label">Ticket Creation Success</span>
+                            <span class="gauge-value" id="evalTicketAcc">100.0%</span>
+                            <span class="gauge-desc">Zero ghost tickets</span>
+                        </div>
+                        <div class="eval-gauge-card">
+                            <span class="gauge-label">Escalation Accuracy</span>
+                            <span class="gauge-value" id="evalEscalationAcc">100.0%</span>
+                            <span class="gauge-desc">SLA policy compliance</span>
+                        </div>
+                        <div class="eval-gauge-card">
+                            <span class="gauge-label">Unauthorized Blocking</span>
+                            <span class="gauge-value" id="evalSecurityAcc">100.0%</span>
+                            <span class="gauge-desc">RBAC enforcement</span>
+                        </div>
+                    </div>
+
+                    <div class="eval-section-card">
+                        <h3>RAG Retrieval & Generation Quality</h3>
+                        <div class="rag-stats-row">
+                            <div class="rag-stat-item"><span>Recall@3:</span><strong id="evalRecall3">1.00</strong></div>
+                            <div class="rag-stat-item"><span>Precision@3:</span><strong id="evalPrec3">0.78</strong></div>
+                            <div class="rag-stat-item"><span>MRR:</span><strong id="evalMRR">1.00</strong></div>
+                            <div class="rag-stat-item"><span>Faithfulness:</span><strong id="evalFaith">0.99</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 6: Security & Audit Logs -->
+            <div class="view-panel" id="audit-view">
+                <div class="admin-view-container">
+                    <div class="view-header-bar">
+                        <h2>Security & Operational Audit Logs</h2>
+                        <button class="btn-secondary" id="refreshAuditBtn">Refresh Audit Stream</button>
+                    </div>
+
+                    <div class="table-card">
+                        <table class="data-table" id="auditTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Action</th>
+                                    <th>Resource</th>
+                                    <th>Auth Result</th>
+                                    <th>Risk Level</th>
+                                    <th>Status</th>
+                                    <th>Request ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTableBody">
+                                <tr><td colspan="9" class="table-empty">Loading audit trail...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
+    </div>
+
+    <!-- Ticket Detail Modal -->
+    <div class="modal-backdrop" id="ticketModalBackdrop">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge" id="modalTicketId">TKT-0000</span>
+                    <h3 id="modalTicketTitle">Ticket Title</h3>
+                </div>
+                <button class="btn-close-modal" id="closeTicketModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="ticket-meta-grid">
+                    <div><span>Requester:</span> <strong id="modalTicketRequester">EMP-1001</strong></div>
+                    <div><span>Category:</span> <strong id="modalTicketCategory">NETWORK</strong></div>
+                    <div><span>Priority:</span> <strong id="modalTicketPriority">MEDIUM</strong></div>
+                    <div><span>Status:</span> <strong id="modalTicketStatus">OPEN</strong></div>
+                    <div><span>Assigned Team:</span> <strong id="modalTicketTeam">Tier 1 Support</strong></div>
+                    <div><span>Created:</span> <strong id="modalTicketCreated">2026-09-28</strong></div>
+                </div>
+                <div class="ticket-section">
+                    <h4>Description</h4>
+                    <p id="modalTicketDesc">Detailed description...</p>
+                </div>
+                <div class="ticket-section">
+                    <h4>Troubleshooting Steps Executed</h4>
+                    <div id="modalTicketSteps" class="steps-history-list">No steps recorded.</div>
+                </div>
+                <div class="ticket-section">
+                    <h4>Internal Comments & Activity</h4>
+                    <div id="modalTicketComments" class="comments-list">No comments yet.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="closeTicketModalOkBtn">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Slide-over Drawer: Source Passage Inspector -->
@@ -268,115 +545,21 @@
                     <span class="drawer-badge">SOURCE INSPECTOR</span>
                     <h3 class="drawer-doc-name" id="drawerDocName">Document Name</h3>
                 </div>
-                <button class="btn-close-drawer" id="closeDrawerBtn" aria-label="Close Inspector">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <button class="btn-close-drawer" id="closeDrawerBtn">✕</button>
             </div>
-
             <div class="drawer-body">
                 <div class="drawer-meta-grid">
-                    <div class="meta-item">
-                        <span class="meta-label">Chunk ID</span>
-                        <code class="meta-val" id="drawerChunkId">chunk_001</code>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">Document ID</span>
-                        <code class="meta-val" id="drawerDocId">doc_001</code>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">Fusion Score (RRF)</span>
-                        <span class="meta-val score-val" id="drawerScore">0.016</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">Retrieval Rank</span>
-                        <span class="meta-val" id="drawerRank">#1</span>
-                    </div>
+                    <div class="meta-item"><span class="meta-label">Chunk ID</span><code class="meta-val" id="drawerChunkId">chunk_001</code></div>
+                    <div class="meta-item"><span class="meta-label">Document ID</span><code class="meta-val" id="drawerDocId">doc_001</code></div>
+                    <div class="meta-item"><span class="meta-label">Fusion Score (RRF)</span><span class="meta-val score-val" id="drawerScore">0.016</span></div>
+                    <div class="meta-item"><span class="meta-label">Retrieval Rank</span><span class="meta-val" id="drawerRank">#1</span></div>
                 </div>
-
                 <div class="drawer-section">
                     <span class="section-title">Retrieved Policy Passage</span>
-                    <div class="passage-box" id="drawerContent">
-                        Passage text...
-                    </div>
-                </div>
-
-                <div class="drawer-section" id="drawerMetaSection">
-                    <span class="section-title">Preserved Metadata</span>
-                    <pre class="metadata-json" id="drawerMetadataJson">{}</pre>
+                    <div class="passage-box" id="drawerContent">Passage text...</div>
                 </div>
             </div>
         </aside>
-    </div>
-
-    <!-- Modal: System Diagnostics / Readiness -->
-    <div class="modal-backdrop" id="diagnosticModalBackdrop">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-badge">SYSTEM HEALTH</span>
-                    <h3>Readiness Diagnostics</h3>
-                </div>
-                <button class="btn-close-modal" id="closeModalBtn" aria-label="Close Modal">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <div class="diag-item">
-                    <div class="diag-left">
-                        <span class="diag-title">MongoDB Atlas Connectivity</span>
-                        <span class="diag-desc">Vector index, text search, and session checkpointer collection</span>
-                    </div>
-                    <div class="diag-status" id="diagMongoStatus">
-                        <span class="dot-indicator"></span>
-                        <span class="diag-status-text">Checking...</span>
-                    </div>
-                </div>
-
-                <div class="diag-item">
-                    <div class="diag-left">
-                        <span class="diag-title">Language Model Configuration</span>
-                        <span class="diag-desc">API key authentication and generation readiness</span>
-                    </div>
-                    <div class="diag-status" id="diagModelStatus">
-                        <span class="dot-indicator"></span>
-                        <span class="diag-status-text">Checking...</span>
-                    </div>
-                </div>
-
-                <div class="diag-item">
-                    <div class="diag-left">
-                        <span class="diag-title">Session Memory State</span>
-                        <span class="diag-desc">Multi-turn conversation persistence mode</span>
-                    </div>
-                    <div class="diag-status" id="diagMemoryStatus">
-                        <span class="dot-indicator"></span>
-                        <span class="diag-status-text">Checking...</span>
-                    </div>
-                </div>
-
-                <div class="diag-item">
-                    <div class="diag-left">
-                        <span class="diag-title">API Response Latency</span>
-                        <span class="diag-desc">Round-trip latency to /api/v1/health probe</span>
-                    </div>
-                    <div class="diag-status" id="diagPingStatus">
-                        <span class="diag-status-text font-mono" id="diagPingTime">-- ms</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn-secondary" id="refreshDiagBtn">Refresh Status</button>
-                <button class="btn-primary" id="closeModalOkBtn">Close</button>
-            </div>
-        </div>
     </div>
 
     <!-- Notification Toast -->

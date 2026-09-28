@@ -37,6 +37,8 @@ class UserService:
         """Upsert a user record (idempotent seeding)."""
         return self._store.upsert(user)
 
-    def list_users(self, filters: Optional[dict[str, Any]] = None) -> list[UserContextRecord]:
+    def list_users(
+        self, filters: Optional[dict[str, Any]] = None
+    ) -> list[UserContextRecord]:
         """List users matching optional filter criteria."""
         return self._store.list(filters)

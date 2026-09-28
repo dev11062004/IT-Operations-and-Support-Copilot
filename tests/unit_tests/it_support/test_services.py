@@ -1,6 +1,7 @@
 """Unit tests for service status models, store, and domain service."""
 
 from unittest.mock import MagicMock
+
 import pytest
 
 from mcp_rag_agent.it_support.incidents.models import IncidentCreate, IncidentRecord
@@ -11,7 +12,10 @@ from mcp_rag_agent.it_support.services.models import (
     ServiceStatusRecord,
 )
 from mcp_rag_agent.it_support.services.service import ServiceStatusChecker
-from mcp_rag_agent.it_support.services.store import ServiceNotFoundError, ServiceStatusStore
+from mcp_rag_agent.it_support.services.store import (
+    ServiceNotFoundError,
+    ServiceStatusStore,
+)
 
 
 class MemoryServiceStore:
@@ -47,7 +51,11 @@ class MemoryIncidentStore:
         return self.records[incident_id]
 
     def list_active(self):
-        return [item for item in self.records.values() if item.status != IncidentStatus.RESOLVED]
+        return [
+            item
+            for item in self.records.values()
+            if item.status != IncidentStatus.RESOLVED
+        ]
 
     def find_matching(self, criteria):
         return [item for item in self.list_active() if item.service == criteria.service]
@@ -111,7 +119,9 @@ def test_service_status_active_incident_correlation() -> None:
 def test_service_status_store_mongodb_adapter() -> None:
     client = MagicMock()
     collection = client.get_collection.return_value
-    record = ServiceStatusRecord(service_name="corporate_vpn", status=ServiceOperationalStatus.OPERATIONAL)
+    record = ServiceStatusRecord(
+        service_name="corporate_vpn", status=ServiceOperationalStatus.OPERATIONAL
+    )
     collection.find_one.return_value = record.model_dump(mode="json")
     collection.find.return_value = [record.model_dump(mode="json")]
 

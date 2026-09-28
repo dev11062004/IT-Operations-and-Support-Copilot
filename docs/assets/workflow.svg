@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 400" width="100%" height="100%">
+    <style>
+        .box { rx: 8; stroke-width: 1.5; }
+        .title { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 700; }
+        .subtitle { font-family: system-ui, -apple-system, sans-serif; font-size: 11px; font-weight: 400; }
+        @media (prefers-color-scheme: dark) {
+            .bg { fill: #0b0f19; }
+            .node-user { fill: #1e1b4b; stroke: #6366f1; }
+            .node-intent { fill: #0f2e2e; stroke: #14b8a6; }
+            .node-context { fill: #172554; stroke: #3b82f6; }
+            .node-rag { fill: #1e293b; stroke: #38bdf8; }
+            .node-rb { fill: #2e1065; stroke: #a855f7; }
+            .node-eval { fill: #312e81; stroke: #818cf8; }
+            .node-ticket { fill: #064e3b; stroke: #10b981; }
+            .node-esc { fill: #450a0a; stroke: #ef4444; }
+            .text-main { fill: #f9fafb; }
+            .text-sub { fill: #9ca3af; }
+            .arrow-line { stroke: #6b7280; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        }
+        @media (prefers-color-scheme: light) {
+            .bg { fill: #f8fafc; }
+            .node-user { fill: #eef2ff; stroke: #4f46e5; }
+            .node-intent { fill: #f0fdfa; stroke: #0d9488; }
+            .node-context { fill: #eff6ff; stroke: #2563eb; }
+            .node-rag { fill: #f0f9ff; stroke: #0284c7; }
+            .node-rb { fill: #faf5ff; stroke: #9333ea; }
+            .node-eval { fill: #f5f3ff; stroke: #7c3aed; }
+            .node-ticket { fill: #ecfdf5; stroke: #059669; }
+            .node-esc { fill: #fef2f2; stroke: #dc2626; }
+            .text-main { fill: #0f172a; }
+            .text-sub { fill: #475569; }
+            .arrow-line { stroke: #94a3b8; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        }
+    </style>
+    <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#64748b" />
+        </marker>
+    </defs>
+    <rect width="920" height="400" class="bg" rx="12" />
+
+    <text x="30" y="36" font-family="system-ui, sans-serif" font-size="18" font-weight="800" class="text-main">End-to-End Request &amp; IT Troubleshooting Workflow</text>
+    <text x="30" y="56" font-family="system-ui, sans-serif" font-size="12" font-weight="500" class="text-sub">Lifecycle from initial employee prompt through intent routing, runbook diagnosis, resolution, or tier-2 escalation</text>
+
+    <!-- Top Flow -->
+    <!-- 1. User Issue -->
+    <rect x="30" y="90" width="125" height="70" class="node-user box" />
+    <text x="92" y="120" text-anchor="middle" class="title text-main">1. User Issue</text>
+    <text x="92" y="140" text-anchor="middle" class="subtitle text-sub">"VPN Failing"</text>
+
+    <!-- Arrow 1->2 -->
+    <line x1="155" y1="125" x2="185" y2="125" class="arrow-line" />
+
+    <!-- 2. Intent Routing -->
+    <rect x="190" y="90" width="135" height="70" class="node-intent box" />
+    <text x="257" y="118" text-anchor="middle" class="title text-main">2. Intent Router</text>
+    <text x="257" y="136" text-anchor="middle" class="subtitle text-sub">Deterministic</text>
+    <text x="257" y="150" text-anchor="middle" class="subtitle text-sub">VPN_ISSUE</text>
+
+    <!-- Arrow 2->3 -->
+    <line x1="325" y1="125" x2="355" y2="125" class="arrow-line" />
+
+    <!-- 3. Operational Context -->
+    <rect x="360" y="90" width="145" height="70" class="node-context box" />
+    <text x="432" y="118" text-anchor="middle" class="title text-main">3. MCP Context</text>
+    <text x="432" y="136" text-anchor="middle" class="subtitle text-sub">User &amp; Device Info</text>
+    <text x="432" y="150" text-anchor="middle" class="subtitle text-sub">Active Outages</text>
+
+    <!-- Arrow 3->4 -->
+    <line x1="505" y1="125" x2="535" y2="125" class="arrow-line" />
+
+    <!-- 4. Hybrid RAG -->
+    <rect x="540" y="90" width="145" height="70" class="node-rag box" />
+    <text x="612" y="118" text-anchor="middle" class="title text-main">4. Hybrid RAG</text>
+    <text x="612" y="136" text-anchor="middle" class="subtitle text-sub">Dense + BM25 (RRF)</text>
+    <text x="612" y="150" text-anchor="middle" class="subtitle text-sub">Policy Grounding</text>
+
+    <!-- Arrow 4->5 -->
+    <line x1="685" y1="125" x2="715" y2="125" class="arrow-line" />
+
+    <!-- 5. Runbook Selection -->
+    <rect x="720" y="90" width="165" height="70" class="node-rb box" />
+    <text x="802" y="118" text-anchor="middle" class="title text-main">5. Runbook Selection</text>
+    <text x="802" y="136" text-anchor="middle" class="subtitle text-sub">RB-NET-VPN-001</text>
+    <text x="802" y="150" text-anchor="middle" class="subtitle text-sub">Registry Match</text>
+
+    <!-- Connecting down to Step Loop -->
+    <path d="M 802 160 L 802 210 L 102 210 L 102 245" class="arrow-line" />
+
+    <!-- Bottom Row: Runbook Step Execution -->
+    <!-- 6. Step Execution -->
+    <rect x="30" y="250" width="145" height="85" class="node-rb box" />
+    <text x="102" y="280" text-anchor="middle" class="title text-main">6. Step Action</text>
+    <text x="102" y="298" text-anchor="middle" class="subtitle text-sub">Verify Certs / DNS</text>
+    <text x="102" y="316" text-anchor="middle" class="subtitle text-sub">Step X of Y Tracker</text>
+
+    <!-- Arrow 6->7 -->
+    <line x1="175" y1="292" x2="215" y2="292" class="arrow-line" />
+
+    <!-- 7. Evaluation & Branching -->
+    <rect x="220" y="250" width="160" height="85" class="node-eval box" />
+    <text x="300" y="280" text-anchor="middle" class="title text-main">7. Evaluate State</text>
+    <text x="300" y="298" text-anchor="middle" class="subtitle text-sub">Structured Transition</text>
+    <text x="300" y="316" text-anchor="middle" class="subtitle text-sub">Determined in Graph</text>
+
+    <!-- 3 Branch Arrows from 7 -->
+    <!-- Branch A: Next Step Loop -->
+    <path d="M 300 250 L 300 230 L 102 230 L 102 245" class="arrow-line" />
+
+    <!-- Branch B: Resolved -->
+    <line x1="380" y1="275" x2="445" y2="275" class="arrow-line" />
+    <rect x="450" y="250" width="195" height="50" class="node-ticket box" />
+    <text x="547" y="272" text-anchor="middle" class="title text-main">Resolved (Self-Service)</text>
+    <text x="547" y="288" text-anchor="middle" class="subtitle text-sub">Update Ticket / Close Session</text>
+
+    <!-- Branch C: Escalated -->
+    <path d="M 380 310 L 445 345" class="arrow-line" />
+    <rect x="450" y="320" width="195" height="50" class="node-esc box" />
+    <text x="547" y="342" text-anchor="middle" class="title text-main">Escalated (Tier 2/3)</text>
+    <text x="547" y="358" text-anchor="middle" class="subtitle text-sub">Assign Team • Priority Tagging</text>
+
+    <!-- Final Ticket Record Box -->
+    <line x1="645" y1="310" x2="705" y2="310" class="arrow-line" />
+    <rect x="710" y="270" width="175" height="85" class="node-ticket box" />
+    <text x="797" y="298" text-anchor="middle" class="title text-main">MongoDB Ticket</text>
+    <text x="797" y="316" text-anchor="middle" class="subtitle text-sub">Duplicate Detection</text>
+    <text x="797" y="334" text-anchor="middle" class="subtitle text-sub">Full Audit Trail</text>
+</svg>

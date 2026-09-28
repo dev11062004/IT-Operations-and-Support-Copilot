@@ -176,9 +176,13 @@ class GetUserContextOutput(BaseModel):
     """Output schema for get_user_context tool."""
 
     status: str = Field(..., description="Status: 'success', 'not_found', or 'error'")
-    user: Optional[dict[str, Any]] = Field(default=None, description="User context details")
+    user: Optional[dict[str, Any]] = Field(
+        default=None, description="User context details"
+    )
     error_code: Optional[str] = Field(default=None, description="Standard error code")
-    error_message: Optional[str] = Field(default=None, description="User-safe error explanation")
+    error_message: Optional[str] = Field(
+        default=None, description="User-safe error explanation"
+    )
 
     def to_tool_string(self) -> str:
         if self.status == "success" and self.user:
@@ -214,10 +218,14 @@ class GetDeviceInfoOutput(BaseModel):
     """Output schema for get_device_info tool."""
 
     status: str = Field(..., description="Status: 'success', 'not_found', or 'error'")
-    devices: list[dict[str, Any]] = Field(default_factory=list, description="Matching device records")
+    devices: list[dict[str, Any]] = Field(
+        default_factory=list, description="Matching device records"
+    )
     total_found: int = Field(default=0, description="Number of devices found")
     error_code: Optional[str] = Field(default=None, description="Standard error code")
-    error_message: Optional[str] = Field(default=None, description="User-safe error explanation")
+    error_message: Optional[str] = Field(
+        default=None, description="User-safe error explanation"
+    )
 
     def to_tool_string(self) -> str:
         if self.status == "success" and self.devices:
@@ -251,16 +259,28 @@ class CheckServiceStatusOutput(BaseModel):
 
     status: str = Field(..., description="Status: 'success', 'not_found', or 'error'")
     service_name: str = Field(..., description="Canonical service name")
-    service_status: str = Field(..., description="Status: 'OPERATIONAL', 'DEGRADED', 'OUTAGE', 'UNKNOWN'")
-    last_updated: Optional[str] = Field(default=None, description="Timestamp of status update")
-    known_incident_id: Optional[str] = Field(default=None, description="Active incident ID if degraded/outage")
+    service_status: str = Field(
+        ..., description="Status: 'OPERATIONAL', 'DEGRADED', 'OUTAGE', 'UNKNOWN'"
+    )
+    last_updated: Optional[str] = Field(
+        default=None, description="Timestamp of status update"
+    )
+    known_incident_id: Optional[str] = Field(
+        default=None, description="Active incident ID if degraded/outage"
+    )
     message: Optional[str] = Field(default=None, description="Status summary message")
     error_code: Optional[str] = Field(default=None, description="Standard error code")
-    error_message: Optional[str] = Field(default=None, description="User-safe error explanation")
+    error_message: Optional[str] = Field(
+        default=None, description="User-safe error explanation"
+    )
 
     def to_tool_string(self) -> str:
         if self.status in ("success", "operational", "degraded", "outage", "unknown"):
-            inc = f" (Linked Incident: {self.known_incident_id})" if self.known_incident_id else ""
+            inc = (
+                f" (Linked Incident: {self.known_incident_id})"
+                if self.known_incident_id
+                else ""
+            )
             return (
                 f"[SERVICE STATUS] Service: '{self.service_name}'\n"
                 f"- Operational Status: {self.service_status}{inc}\n"
@@ -272,28 +292,60 @@ class CheckServiceStatusOutput(BaseModel):
 class CreateTicketToolInput(BaseModel):
     """Input schema for create_ticket MCP tool."""
 
-    title: str = Field(..., min_length=1, max_length=200, description="Short summary of the issue")
-    description: str = Field(..., min_length=1, max_length=4000, description="Detailed description of the issue")
-    category: str = Field(..., min_length=1, max_length=100, description="IT Category (e.g. 'vpn', 'wifi', 'hardware', 'software', 'access', 'security', 'email')")
-    priority: str = Field(default="medium", description="Priority: 'low', 'medium', 'high', 'critical'")
-    requester_id: str = Field(..., min_length=1, max_length=200, description="Employee / requester user ID")
-    assigned_team: Optional[str] = Field(default=None, max_length=200, description="Optional support team")
-    conversation_id: Optional[str] = Field(default=None, max_length=200, description="Optional conversation / thread ID")
-    product: Optional[str] = Field(default=None, max_length=200, description="Product or service involved")
-    platform: Optional[str] = Field(default=None, max_length=100, description="OS or platform involved")
-    error_code: Optional[str] = Field(default=None, max_length=100, description="Observed error code")
+    title: str = Field(
+        ..., min_length=1, max_length=200, description="Short summary of the issue"
+    )
+    description: str = Field(
+        ...,
+        min_length=1,
+        max_length=4000,
+        description="Detailed description of the issue",
+    )
+    category: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="IT Category (e.g. 'vpn', 'wifi', 'hardware', 'software', 'access', 'security', 'email')",
+    )
+    priority: str = Field(
+        default="medium", description="Priority: 'low', 'medium', 'high', 'critical'"
+    )
+    requester_id: str = Field(
+        ..., min_length=1, max_length=200, description="Employee / requester user ID"
+    )
+    assigned_team: Optional[str] = Field(
+        default=None, max_length=200, description="Optional support team"
+    )
+    conversation_id: Optional[str] = Field(
+        default=None, max_length=200, description="Optional conversation / thread ID"
+    )
+    product: Optional[str] = Field(
+        default=None, max_length=200, description="Product or service involved"
+    )
+    platform: Optional[str] = Field(
+        default=None, max_length=100, description="OS or platform involved"
+    )
+    error_code: Optional[str] = Field(
+        default=None, max_length=100, description="Observed error code"
+    )
 
 
 class CreateTicketToolOutput(BaseModel):
     """Output schema for create_ticket MCP tool."""
 
     status: str = Field(..., description="Status: 'success', 'duplicate', or 'error'")
-    ticket_id: Optional[str] = Field(default=None, description="Created or existing ticket ID")
+    ticket_id: Optional[str] = Field(
+        default=None, description="Created or existing ticket ID"
+    )
     ticket: Optional[dict[str, Any]] = Field(default=None, description="Ticket details")
     created: bool = Field(default=False, description="Whether a new ticket was created")
-    duplicate: bool = Field(default=False, description="Whether an existing duplicate was matched")
+    duplicate: bool = Field(
+        default=False, description="Whether an existing duplicate was matched"
+    )
     error_code: Optional[str] = Field(default=None, description="Standard error code")
-    error_message: Optional[str] = Field(default=None, description="User-safe error explanation")
+    error_message: Optional[str] = Field(
+        default=None, description="User-safe error explanation"
+    )
 
     def to_tool_string(self) -> str:
         if self.created:
@@ -317,11 +369,25 @@ class CreateTicketToolOutput(BaseModel):
 class UpdateTicketToolInput(BaseModel):
     """Input schema for update_ticket MCP tool."""
 
-    ticket_id: str = Field(..., min_length=1, max_length=200, description="Ticket ID to update (e.g. 'TKT-1234ABCD')")
-    status: Optional[str] = Field(default=None, description="Target status ('open', 'in_progress', 'waiting_for_user', 'resolved', 'closed', 'escalated')")
-    assigned_team: Optional[str] = Field(default=None, max_length=200, description="Assign to team")
-    comment: Optional[str] = Field(default=None, max_length=4000, description="Comment to append to ticket")
-    author_id: Optional[str] = Field(default=None, max_length=200, description="Author user ID of the comment")
+    ticket_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Ticket ID to update (e.g. 'TKT-1234ABCD')",
+    )
+    status: Optional[str] = Field(
+        default=None,
+        description="Target status ('open', 'in_progress', 'waiting_for_user', 'resolved', 'closed', 'escalated')",
+    )
+    assigned_team: Optional[str] = Field(
+        default=None, max_length=200, description="Assign to team"
+    )
+    comment: Optional[str] = Field(
+        default=None, max_length=4000, description="Comment to append to ticket"
+    )
+    author_id: Optional[str] = Field(
+        default=None, max_length=200, description="Author user ID of the comment"
+    )
 
 
 class UpdateTicketToolOutput(BaseModel):
@@ -329,9 +395,13 @@ class UpdateTicketToolOutput(BaseModel):
 
     status: str = Field(..., description="Status: 'success' or 'error'")
     ticket_id: Optional[str] = Field(default=None, description="Updated ticket ID")
-    ticket: Optional[dict[str, Any]] = Field(default=None, description="Updated ticket details")
+    ticket: Optional[dict[str, Any]] = Field(
+        default=None, description="Updated ticket details"
+    )
     error_code: Optional[str] = Field(default=None, description="Standard error code")
-    error_message: Optional[str] = Field(default=None, description="User-safe error explanation")
+    error_message: Optional[str] = Field(
+        default=None, description="User-safe error explanation"
+    )
 
     def to_tool_string(self) -> str:
         if self.status == "success" and self.ticket:

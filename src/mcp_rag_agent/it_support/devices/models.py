@@ -16,7 +16,11 @@ class DeviceRecord(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    device_id: str = Field(default_factory=lambda: f"DEV-{uuid4().hex[:8].upper()}", min_length=1, max_length=200)
+    device_id: str = Field(
+        default_factory=lambda: f"DEV-{uuid4().hex[:8].upper()}",
+        min_length=1,
+        max_length=200,
+    )
     user_id: str | None = Field(default=None, max_length=200)
     device_type: str = Field(default="laptop", min_length=1, max_length=100)
     manufacturer: str | None = Field(default=None, max_length=100)

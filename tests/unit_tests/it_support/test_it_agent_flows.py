@@ -1,6 +1,7 @@
 """Integration and workflow tests for IT Operations agent capabilities and tool binding."""
 
 from unittest.mock import MagicMock
+
 import pytest
 
 from mcp_rag_agent.agent.create_agent import create_rag_agent_instance
@@ -13,7 +14,11 @@ from mcp_rag_agent.it_support.services.service import ServiceStatusChecker
 from mcp_rag_agent.it_support.tickets.models import TicketLifecycleStatus, TicketRecord
 from mcp_rag_agent.it_support.tickets.service import TicketService
 from mcp_rag_agent.it_support.tools import create_it_operations_tools
-from mcp_rag_agent.it_support.users.models import SupportTier, UserContextRecord, UserStatus
+from mcp_rag_agent.it_support.users.models import (
+    SupportTier,
+    UserContextRecord,
+    UserStatus,
+)
 from mcp_rag_agent.it_support.users.service import UserService
 from mcp_rag_agent.it_support.users.store import UserNotFoundError
 from mcp_rag_agent.mcp_server.tools import (
@@ -125,6 +130,7 @@ async def test_agent_toolbelt_includes_it_operations_when_flag_enabled():
     )
 
     from langgraph.checkpoint.memory import MemorySaver
+
     checkpointer = MemorySaver()
 
     runner = await create_rag_agent_instance(
@@ -146,7 +152,9 @@ async def test_it_tools_vpn_workflow():
     assert "Engineering" in user_out
 
     # 2. Service status check
-    svc_out = await tools["check_service_status"].ainvoke({"service_name": "corporate_vpn"})
+    svc_out = await tools["check_service_status"].ainvoke(
+        {"service_name": "corporate_vpn"}
+    )
     assert "OPERATIONAL" in svc_out
 
     # 3. Device info lookup

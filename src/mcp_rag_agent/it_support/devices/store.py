@@ -9,13 +9,16 @@ from mcp_rag_agent.mongodb import MongoDBClient
 
 class DeviceNotFoundError(KeyError):
     """Raised when a requested device cannot be found."""
+
     pass
 
 
 class DeviceStore:
     """Persistence store for enterprise devices in MongoDB."""
 
-    def __init__(self, mongo_client: MongoDBClient, collection_name: str = "it_devices") -> None:
+    def __init__(
+        self, mongo_client: MongoDBClient, collection_name: str = "it_devices"
+    ) -> None:
         self._mongo_client = mongo_client
         self._collection_name = collection_name
 
@@ -51,12 +54,19 @@ class DeviceStore:
         docs = self._collection.find({"user_id": user_id})
         return [self._to_record(doc) for doc in docs]
 
-    def list(self, filters: dict[str, Any] | None = None, limit: int = 100) -> list[DeviceRecord]:
-        return [self._to_record(item) for item in self._collection.find(filters or {}).limit(limit)]
+    def list(
+        self, filters: dict[str, Any] | None = None, limit: int = 100
+    ) -> list[DeviceRecord]:
+        return [
+            self._to_record(item)
+            for item in self._collection.find(filters or {}).limit(limit)
+        ]
 
     def update_fields(self, device_id: str, fields: dict[str, Any]) -> DeviceRecord:
         payload = {**fields, "updated_at": datetime.now(timezone.utc).isoformat()}
-        result = self._collection.update_one({"device_id": device_id}, {"$set": payload})
+        result = self._collection.update_one(
+            {"device_id": device_id}, {"$set": payload}
+        )
         if not result.matched_count:
             raise DeviceNotFoundError(f"Device '{device_id}' not found")
         return self.get(device_id)

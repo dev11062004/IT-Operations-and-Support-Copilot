@@ -65,8 +65,12 @@ class Config(BaseSettings):
     db_vector_index_name: str = os.environ.get(
         "MONGODB_VECTOR_INDEX_NAME", "vector_index"
     )
-    db_tickets_collection: str = os.environ.get("MONGODB_TICKETS_COLLECTION", "it_tickets")
-    db_incidents_collection: str = os.environ.get("MONGODB_INCIDENTS_COLLECTION", "it_incidents")
+    db_tickets_collection: str = os.environ.get(
+        "MONGODB_TICKETS_COLLECTION", "it_tickets"
+    )
+    db_incidents_collection: str = os.environ.get(
+        "MONGODB_INCIDENTS_COLLECTION", "it_incidents"
+    )
     session_memory_ttl_seconds: Optional[int] = (
         int(os.environ.get("SESSION_MEMORY_TTL_SECONDS"))
         if os.environ.get("SESSION_MEMORY_TTL_SECONDS")
@@ -109,8 +113,7 @@ class Config(BaseSettings):
         os.environ.get("FEATURE_FLAG_GUARDRAILS_ENABLED", "true").lower() == "true"
     )
     ff_it_support: bool = (
-        os.environ.get("FEATURE_FLAG_IT_SUPPORT_ENABLED", "false").lower()
-        == "true"
+        os.environ.get("FEATURE_FLAG_IT_SUPPORT_ENABLED", "false").lower() == "true"
     )
     # Guardrail settings
     guardrail_confidence_threshold: float = float(

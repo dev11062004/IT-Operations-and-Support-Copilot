@@ -7,7 +7,10 @@ from uuid import uuid4
 from langgraph.graph import END, START, StateGraph
 
 from mcp_rag_agent.it_support.runbooks.models import Runbook, RunbookStatus, StepOutcome
-from mcp_rag_agent.it_support.runbooks.registry import RunbookRegistry, get_default_registry
+from mcp_rag_agent.it_support.runbooks.registry import (
+    RunbookRegistry,
+    get_default_registry,
+)
 
 logger = logging.getLogger("RunbookGraph")
 
@@ -34,7 +37,9 @@ class RunbookGraphState(TypedDict, total=False):
     error: Optional[str]
 
 
-def _get_runbook_from_state(state: RunbookGraphState, registry: RunbookRegistry) -> Runbook:
+def _get_runbook_from_state(
+    state: RunbookGraphState, registry: RunbookRegistry
+) -> Runbook:
     runbook_id = state["runbook_id"]
     version = state.get("runbook_version")
     return registry.get(runbook_id, version=version)
@@ -73,7 +78,9 @@ def create_runbook_subgraph(
         retry_count = state.get("retry_counts", {}).get(step_id, 0)
         instruction = step.instruction
         if retry_count > 0:
-            instruction = f"[Retry Attempt {retry_count}/{step.max_retries}] {instruction}"
+            instruction = (
+                f"[Retry Attempt {retry_count}/{step.max_retries}] {instruction}"
+            )
 
         return {
             "current_step_id": step_id,
@@ -91,7 +98,9 @@ def create_runbook_subgraph(
         runbook = _get_runbook_from_state(state, active_registry)
         current_step_id = state.get("current_step_id")
         if not current_step_id:
-            raise ValueError("Cannot evaluate outcome: current_step_id is missing from state.")
+            raise ValueError(
+                "Cannot evaluate outcome: current_step_id is missing from state."
+            )
 
         step = runbook.get_step(current_step_id)
         raw_outcome = state.get("step_outcome") or "failure"
@@ -126,7 +135,9 @@ def create_runbook_subgraph(
             else:
                 next_step = step.next_step_on_failure
         else:
-            raise ValueError(f"Unrecognized step outcome: '{raw_outcome}'. Must be success, failure, retry, or escalate.")
+            raise ValueError(
+                f"Unrecognized step outcome: '{raw_outcome}'. Must be success, failure, retry, or escalate."
+            )
 
         # 2. Record Step Execution in History
         history_entry = {

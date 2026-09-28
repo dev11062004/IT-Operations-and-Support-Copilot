@@ -38,8 +38,32 @@ tools (`get_user_context`, `get_device_info`, `check_service_status`, `create_ti
 The tools are backed by domain services and stores for users (`it_support/users/`),
 devices (`it_support/devices/`), and service statuses (`it_support/services/`),
 reusing the existing MongoDB connection layer and Phase 13-B ticket services.
-RBAC and human approval (Phase 13-E) and admin dashboards/evaluation (Phase 13-F)
-remain future phases.
+
+Phase 13-E adds enterprise security controls for the IT Operations & Support Copilot:
+Role-Based Access Control (RBAC) with 5 strongly typed roles (`EMPLOYEE`, `IT_SUPPORT`,
+`SECURITY_ANALYST`, `IT_ADMIN`, `SYSTEM_ADMIN`); 17 granular permissions; an authoritative
+permission matrix; resource-level access control enforcing cross-user isolation for tickets,
+user contexts, and devices; pre-retrieval document access-level filtering ensuring restricted
+documents never enter the LLM context; MCP operational tool authorization; deterministic risk
+classification (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`); human-in-the-loop (HITL) approval workflows
+with strict separation of duties (preventing AI agents or requesters from approving their own
+high-risk actions); and MongoDB-backed structured audit logging (`it_audit_logs`) with recursive
+secret/credential redaction.
+
+Phase 13-F adds the comprehensive IT-Specific Evaluation suite and Admin Operations Platform.
+The evaluation framework introduces a versioned 105-scenario benchmark (`v1_it_support_benchmark.json`)
+testing knowledge retrieval, multi-step troubleshooting, operational outages, security attacks, multi-turn
+dialogue, and negative controls. Twelve IT-specific metrics (`intent_accuracy`, `runbook_selection_accuracy`,
+`runbook_completion_rate`, `ticket_creation_success_rate`, `ticket_classification_accuracy`,
+`duplicate_ticket_rate`, `tool_selection_accuracy`, `escalation_accuracy`, `escalation_rate`,
+`unnecessary_escalation_rate`, `missed_escalation_rate`, `unauthorized_blocking_rate`) are computed
+alongside classical RAG metrics. The regression comparator flags 9 distinct failure categories in
+transparent markdown reports (`evaluation/reports/it_support_regression_report.md`).
+The FastAPI backend exposes authorized Admin endpoints (`/api/v1/admin/tickets`, `/api/v1/admin/incidents`,
+`/api/v1/admin/metrics`, `/api/v1/admin/evaluation`, `/api/v1/admin/audit`) protected by RBAC dependencies.
+The web UI is enhanced with a Role Selector, Active Runbook Step Tracker widget (Step X of Y, current action,
+completed milestones, next step), KPI Cards, Ticket Management Queue & Detail Modal, Incident Viewer,
+Evaluation Benchmark visualizer, and Sanitized Audit Log inspector.
 
 ## Evidence
 
@@ -52,6 +76,16 @@ remain future phases.
 - Phase 13-C unit tests added: 17 covering registration, active-versioning, heuristic/intent selection, step execution, branching, retries, escalations, cross-instance state restoration, and invalid transitions
 - Phase 13-D modules created: 17 (users domain [4], devices domain [4], services domain [4], tools/script [2], and 5 test suites)
 - Phase 13-D unit tests added: 28 covering user lookups, device info, service status, incident correlation, ticket creation/duplicate detection/updates via MCP, and direct agent workflow tool execution
-- Total IT Support unit tests: 88/88 passed
-- Total offline unit test suite: 285/285 passed (197 baseline + 27 Phase 13-A + 16 Phase 13-B + 17 Phase 13-C + 28 Phase 13-D)
-
+- Phase 13-E modules created: 9 (`rbac.py`, `authorization.py`, `approval.py`, `audit.py`, `__init__.py`, and 4 test suites: `test_rbac.py`, `test_authorization.py`, `test_approval.py`, `test_audit.py`, `test_security_regression.py`)
+- Phase 13-E unit tests added: 44 covering RBAC permission matrix (11), authorization and pre-retrieval document filtering (12), HITL approval and separation of duties (10), structured audit logging and credential redaction (5), and cross-user isolation / privilege escalation security regressions (6)
+- Phase 13-F modules created: 7 (`v1_it_support_benchmark.json`, `it_metrics.py`, `admin_service.py`, `admin.py`, `test_it_evaluation.py`, `test_admin_api.py`, `IT_EVALUATION.md`)
+- Phase 13-F unit tests added: 11 (5 evaluation & regression comparator, 6 admin API & RBAC protection)
+- IT Benchmark scenarios evaluated: 105
+- Measured Intent accuracy: 83.8%
+- Measured Runbook selection accuracy: 84.4%
+- Measured Runbook completion rate: 80.0%
+- Measured Ticket creation success rate: 100.0%
+- Measured Escalation accuracy: 100.0%
+- Measured Unauthorized action blocking rate: 100.0%
+- Total IT Support unit tests: 143/143 passed
+- Total offline unit test suite: 340/340 passed in 23.01s (197 baseline + 27 Phase 13-A + 16 Phase 13-B + 17 Phase 13-C + 28 Phase 13-D + 44 Phase 13-E + 11 Phase 13-F)

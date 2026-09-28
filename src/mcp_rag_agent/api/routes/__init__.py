@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from mcp_rag_agent.api.routes.admin import router as admin_router
 from mcp_rag_agent.api.routes.chat import router as chat_router
 from mcp_rag_agent.api.routes.conversations import router as conversations_router
 from mcp_rag_agent.api.routes.health import router as health_router
@@ -14,5 +15,6 @@ api_router.include_router(chat_router)
 api_router.include_router(conversations_router)
 api_router.include_router(health_router)
 api_router.include_router(it_tickets_router)
+api_router.include_router(admin_router)
 
 __all__ = ["api_router"]

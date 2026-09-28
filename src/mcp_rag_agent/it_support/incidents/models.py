@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mcp_rag_agent.it_support.models import ITCategory, IncidentStatus, Priority
+from mcp_rag_agent.it_support.models import IncidentStatus, ITCategory, Priority
 
 
 def _utc_now() -> datetime:

@@ -39,6 +39,9 @@ _device_service: Optional[Any] = None
 _service_status_checker: Optional[Any] = None
 _ticket_service: Optional[Any] = None
 _incident_service: Optional[Any] = None
+_authorization_service: Optional[Any] = None
+_approval_service: Optional[Any] = None
+_audit_service: Optional[Any] = None
 
 # Secret masking patterns
 _SECRET_PATTERNS = [
@@ -153,13 +156,17 @@ def set_advanced_retriever(retriever: Optional[AdvancedRetriever]) -> None:
 
 
 def reset_it_services() -> None:
-    """Reset cached IT domain service instances."""
+    """Reset cached IT domain service and security instances."""
     global _user_service, _device_service, _service_status_checker, _ticket_service, _incident_service
+    global _authorization_service, _approval_service, _audit_service
     _user_service = None
     _device_service = None
     _service_status_checker = None
     _ticket_service = None
     _incident_service = None
+    _authorization_service = None
+    _approval_service = None
+    _audit_service = None
 
 
 def reset_retriever() -> None:
@@ -237,7 +244,9 @@ def get_service_status_checker(client: Optional[MongoDBClient] = None) -> Any:
         mongo = client or get_mongo_client()
         store = ServiceStatusStore(mongo)
         incidents = get_incident_service(mongo)
-        _service_status_checker = ServiceStatusChecker(store=store, incident_service=incidents)
+        _service_status_checker = ServiceStatusChecker(
+            store=store, incident_service=incidents
+        )
     return _service_status_checker
 
 
@@ -265,13 +274,65 @@ def set_ticket_service(service: Optional[Any]) -> None:
     _ticket_service = service
 
 
+def get_authorization_service() -> Any:
+    """Get or lazily initialize the shared AuthorizationService."""
+    global _authorization_service
+    if _authorization_service is None:
+        from mcp_rag_agent.security.authorization import AuthorizationService
+
+        _authorization_service = AuthorizationService()
+    return _authorization_service
+
+
+def set_authorization_service(service: Optional[Any]) -> None:
+    """Set or override the AuthorizationService instance."""
+    global _authorization_service
+    _authorization_service = service
+
+
+def get_approval_service(client: Optional[MongoDBClient] = None) -> Any:
+    """Get or lazily initialize the shared ApprovalService."""
+    global _approval_service
+    if _approval_service is None:
+        from mcp_rag_agent.security.approval import ApprovalService, ApprovalStore
+
+        mongo = client or get_mongo_client()
+        _approval_service = ApprovalService(ApprovalStore(mongo))
+    return _approval_service
+
+
+def set_approval_service(service: Optional[Any]) -> None:
+    """Set or override the ApprovalService instance."""
+    global _approval_service
+    _approval_service = service
+
+
+def get_audit_service(client: Optional[MongoDBClient] = None) -> Any:
+    """Get or lazily initialize the shared AuditService."""
+    global _audit_service
+    if _audit_service is None:
+        from mcp_rag_agent.security.audit import AuditService, AuditStore
+
+        mongo = client or get_mongo_client()
+        _audit_service = AuditService(AuditStore(mongo))
+    return _audit_service
+
+
+def set_audit_service(service: Optional[Any]) -> None:
+    """Set or override the AuditService instance."""
+    global _audit_service
+    _audit_service = service
+
+
 async def search_policy_documents_typed(
     input_data: SearchDocumentsInput,
+    subject: Optional[Any] = None,
 ) -> SearchDocumentsOutput:
     """Execute typed search_policy_documents tool with robust error handling and privacy-safe logging.
 
     Args:
         input_data: Validated SearchDocumentsInput containing query, top_k, and optional filter_query.
+        subject: Optional SecuritySubject caller context for authorization and retrieval filtering.
 
     Returns:
         SearchDocumentsOutput with status, chunks, latency, and document IDs.
@@ -281,15 +342,41 @@ async def search_policy_documents_typed(
         get_current_tracer,
         get_request_id,
     )
+    from mcp_rag_agent.security import get_current_subject
 
     req_id = get_request_id() or "-"
     tracer = get_current_tracer()
+    active_subject = subject or get_current_subject()
 
     safe_query = mask_sensitive(input_data.query)
     logger.info(
         f"[TOOL:search_policy_documents] [req:{req_id}] Executing query: '{safe_query}' (top_k={input_data.top_k})"
     )
     start_t = time.perf_counter()
+
+    if active_subject is not None:
+        auth = get_authorization_service().can_execute_tool(
+            active_subject, "search_policy_documents", {"query": input_data.query}
+        )
+        if not auth.allowed:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="search_policy_documents",
+                request_id=req_id,
+                resource_type="knowledge",
+                authorization_result="DENIED",
+                status="denied",
+                details={"reason": auth.reason_code, "message": auth.message},
+            )
+            return SearchDocumentsOutput(
+                status="error",
+                chunks=[],
+                total_found=0,
+                error_message=auth.message,
+                retrieval_latency_ms=0.0,
+                document_ids=[],
+            )
 
     try:
         retriever = get_advanced_retriever()
@@ -327,6 +414,13 @@ async def search_policy_documents_typed(
             if c.document_id:
                 doc_ids.add(c.document_id)
 
+        # Pre-synthesis retrieval access authorization filter
+        if active_subject is not None:
+            chunks_out = get_authorization_service().filter_documents_for_subject(
+                active_subject, chunks_out
+            )
+            doc_ids = {c.document_id for c in chunks_out if c.document_id}
+
         status = "success" if chunks_out else "empty"
         latency_ms = result.latency.total_latency_ms
         error_msg = None
@@ -342,6 +436,18 @@ async def search_policy_documents_typed(
             f"[TOOL:search_policy_documents] [req:{req_id}] Status: {status}, "
             f"Found: {len(chunks_out)} chunks, Latency: {latency_ms:.2f}ms"
         )
+
+        if active_subject is not None:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="search_policy_documents",
+                request_id=req_id,
+                resource_type="knowledge",
+                authorization_result="AUTHORIZED",
+                status=status,
+                details={"found": len(chunks_out), "query": safe_query},
+            )
 
         if tracer:
             tracer.record_tool_call(
@@ -458,19 +564,46 @@ async def search_documents_with_debug(
 
 async def get_user_context_typed(
     input_data: GetUserContextInput,
+    subject: Optional[Any] = None,
 ) -> GetUserContextOutput:
-    """Execute typed get_user_context MCP tool with privacy masking and observability."""
+    """Execute typed get_user_context MCP tool with privacy masking, authorization, and observability."""
     from mcp_rag_agent.it_support.users.store import UserNotFoundError
     from mcp_rag_agent.observability import (
         ErrorCategory,
         get_current_tracer,
         get_request_id,
     )
+    from mcp_rag_agent.security import get_current_subject
 
     req_id = get_request_id() or "-"
     tracer = get_current_tracer()
+    active_subject = subject or get_current_subject()
     safe_user_id = mask_sensitive(input_data.user_id)
-    logger.info(f"[TOOL:get_user_context] [req:{req_id}] Looking up user: '{safe_user_id}'")
+    logger.info(
+        f"[TOOL:get_user_context] [req:{req_id}] Looking up user: '{safe_user_id}'"
+    )
+
+    if active_subject is not None:
+        auth = get_authorization_service().can_execute_tool(
+            active_subject, "get_user_context", {"user_id": input_data.user_id}
+        )
+        if not auth.allowed:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="get_user_context",
+                request_id=req_id,
+                resource_type="user",
+                resource_id=input_data.user_id,
+                authorization_result="DENIED",
+                status="denied",
+                details={"reason": auth.reason_code, "message": auth.message},
+            )
+            return GetUserContextOutput(
+                status="error",
+                error_code=auth.reason_code,
+                error_message=auth.message,
+            )
 
     start_t = time.perf_counter()
     try:
@@ -484,6 +617,18 @@ async def get_user_context_typed(
             user_data["metadata"].pop("password_hash", None)
             user_data["metadata"].pop("api_keys", None)
 
+        if active_subject is not None:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="get_user_context",
+                request_id=req_id,
+                resource_type="user",
+                resource_id=input_data.user_id,
+                authorization_result="AUTHORIZED",
+                status="success",
+            )
+
         if tracer:
             tracer.record_tool_call(
                 tool_name="get_user_context",
@@ -493,7 +638,9 @@ async def get_user_context_typed(
                 status="success",
             )
 
-        logger.info(f"[TOOL:get_user_context] [req:{req_id}] User '{safe_user_id}' found ({latency_ms:.2f}ms)")
+        logger.info(
+            f"[TOOL:get_user_context] [req:{req_id}] User '{safe_user_id}' found ({latency_ms:.2f}ms)"
+        )
         return GetUserContextOutput(
             status="success",
             user=user_data,
@@ -501,7 +648,9 @@ async def get_user_context_typed(
 
     except UserNotFoundError:
         latency_ms = (time.perf_counter() - start_t) * 1000.0
-        logger.warning(f"[TOOL:get_user_context] [req:{req_id}] User '{safe_user_id}' not found")
+        logger.warning(
+            f"[TOOL:get_user_context] [req:{req_id}] User '{safe_user_id}' not found"
+        )
         if tracer:
             tracer.record_tool_call(
                 tool_name="get_user_context",
@@ -526,7 +675,10 @@ async def get_user_context_typed(
 
     except Exception as e:
         safe_err = mask_sensitive(str(e))
-        logger.error(f"[TOOL:get_user_context] [req:{req_id}] Database error: {safe_err}", exc_info=True)
+        logger.error(
+            f"[TOOL:get_user_context] [req:{req_id}] Database error: {safe_err}",
+            exc_info=True,
+        )
         if tracer:
             tracer.record_error(
                 category=ErrorCategory.DATABASE_ERROR,
@@ -543,17 +695,20 @@ async def get_user_context_typed(
 
 async def get_device_info_typed(
     input_data: GetDeviceInfoInput,
+    subject: Optional[Any] = None,
 ) -> GetDeviceInfoOutput:
-    """Execute typed get_device_info MCP tool with privacy masking and observability."""
+    """Execute typed get_device_info MCP tool with privacy masking, authorization, and observability."""
     from mcp_rag_agent.it_support.devices.store import DeviceNotFoundError
     from mcp_rag_agent.observability import (
         ErrorCategory,
         get_current_tracer,
         get_request_id,
     )
+    from mcp_rag_agent.security import Role, get_current_subject
 
     req_id = get_request_id() or "-"
     tracer = get_current_tracer()
+    active_subject = subject or get_current_subject()
     start_t = time.perf_counter()
 
     if not input_data.device_id and not input_data.user_id:
@@ -563,20 +718,75 @@ async def get_device_info_typed(
             error_message="Either device_id or user_id must be provided to query device info.",
         )
 
+    if active_subject is not None:
+        auth = get_authorization_service().can_execute_tool(
+            active_subject,
+            "get_device_info",
+            {"device_id": input_data.device_id, "user_id": input_data.user_id},
+        )
+        if not auth.allowed:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="get_device_info",
+                request_id=req_id,
+                resource_type="device",
+                resource_id=input_data.device_id or input_data.user_id,
+                authorization_result="DENIED",
+                status="denied",
+                details={"reason": auth.reason_code, "message": auth.message},
+            )
+            return GetDeviceInfoOutput(
+                status="error",
+                error_code=auth.reason_code,
+                error_message=auth.message,
+            )
+
     try:
         service = get_device_service()
         devices: list[dict[str, Any]] = []
 
         if input_data.device_id:
             safe_dev = mask_sensitive(input_data.device_id)
-            logger.info(f"[TOOL:get_device_info] [req:{req_id}] Looking up device_id: '{safe_dev}'")
+            logger.info(
+                f"[TOOL:get_device_info] [req:{req_id}] Looking up device_id: '{safe_dev}'"
+            )
             device_record = service.get_device_info(input_data.device_id)
             devices.append(device_record.model_dump(mode="json"))
         elif input_data.user_id:
             safe_user = mask_sensitive(input_data.user_id)
-            logger.info(f"[TOOL:get_device_info] [req:{req_id}] Looking up devices for user_id: '{safe_user}'")
+            logger.info(
+                f"[TOOL:get_device_info] [req:{req_id}] Looking up devices for user_id: '{safe_user}'"
+            )
             device_records = service.get_user_devices(input_data.user_id)
             devices.extend([d.model_dump(mode="json") for d in device_records])
+
+        # Resource-level access verification for devices
+        if active_subject is not None and active_subject.role == Role.EMPLOYEE:
+            for dev in devices:
+                res_auth = get_authorization_service().can_access_device(
+                    active_subject, dev
+                )
+                if not res_auth.allowed:
+                    get_audit_service().log_event(
+                        user_id=active_subject.user_id,
+                        role=active_subject.role,
+                        action="get_device_info",
+                        request_id=req_id,
+                        resource_type="device",
+                        resource_id=input_data.device_id or input_data.user_id,
+                        authorization_result="DENIED",
+                        status="denied",
+                        details={
+                            "reason": res_auth.reason_code,
+                            "message": res_auth.message,
+                        },
+                    )
+                    return GetDeviceInfoOutput(
+                        status="error",
+                        error_code=res_auth.reason_code,
+                        error_message=res_auth.message,
+                    )
 
         latency_ms = (time.perf_counter() - start_t) * 1000.0
 
@@ -585,6 +795,18 @@ async def get_device_info_typed(
                 status="not_found",
                 error_code="DEVICE_NOT_FOUND",
                 error_message="No devices found matching the provided criteria.",
+            )
+
+        if active_subject is not None:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="get_device_info",
+                request_id=req_id,
+                resource_type="device",
+                resource_id=input_data.device_id or input_data.user_id,
+                authorization_result="AUTHORIZED",
+                status="success",
             )
 
         if tracer:
@@ -619,7 +841,10 @@ async def get_device_info_typed(
 
     except Exception as e:
         safe_err = mask_sensitive(str(e))
-        logger.error(f"[TOOL:get_device_info] [req:{req_id}] Device lookup error: {safe_err}", exc_info=True)
+        logger.error(
+            f"[TOOL:get_device_info] [req:{req_id}] Device lookup error: {safe_err}",
+            exc_info=True,
+        )
         if tracer:
             tracer.record_error(
                 category=ErrorCategory.DATABASE_ERROR,
@@ -636,6 +861,7 @@ async def get_device_info_typed(
 
 async def check_service_status_typed(
     input_data: CheckServiceStatusInput,
+    subject: Optional[Any] = None,
 ) -> CheckServiceStatusOutput:
     """Execute typed check_service_status MCP tool."""
     from mcp_rag_agent.observability import (
@@ -643,15 +869,55 @@ async def check_service_status_typed(
         get_current_tracer,
         get_request_id,
     )
+    from mcp_rag_agent.security import get_current_subject
 
     req_id = get_request_id() or "-"
     tracer = get_current_tracer()
+    active_subject = subject or get_current_subject()
     start_t = time.perf_counter()
+
+    if active_subject is not None:
+        auth = get_authorization_service().can_execute_tool(
+            active_subject,
+            "check_service_status",
+            {"service_name": input_data.service_name},
+        )
+        if not auth.allowed:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="check_service_status",
+                request_id=req_id,
+                resource_type="service",
+                resource_id=input_data.service_name,
+                authorization_result="DENIED",
+                status="denied",
+                details={"reason": auth.reason_code, "message": auth.message},
+            )
+            return CheckServiceStatusOutput(
+                status="error",
+                service_name=input_data.service_name,
+                service_status="UNKNOWN",
+                error_code=auth.reason_code,
+                error_message=auth.message,
+            )
 
     try:
         checker = get_service_status_checker()
         record = checker.check_service_status(input_data.service_name)
         latency_ms = (time.perf_counter() - start_t) * 1000.0
+
+        if active_subject is not None:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="check_service_status",
+                request_id=req_id,
+                resource_type="service",
+                resource_id=input_data.service_name,
+                authorization_result="AUTHORIZED",
+                status="success",
+            )
 
         if tracer:
             tracer.record_tool_call(
@@ -682,7 +948,10 @@ async def check_service_status_typed(
 
     except Exception as e:
         safe_err = mask_sensitive(str(e))
-        logger.error(f"[TOOL:check_service_status] [req:{req_id}] Error: {safe_err}", exc_info=True)
+        logger.error(
+            f"[TOOL:check_service_status] [req:{req_id}] Error: {safe_err}",
+            exc_info=True,
+        )
         if tracer:
             tracer.record_error(
                 category=ErrorCategory.DATABASE_ERROR,
@@ -701,6 +970,7 @@ async def check_service_status_typed(
 
 async def create_ticket_typed(
     input_data: CreateTicketToolInput,
+    subject: Optional[Any] = None,
 ) -> CreateTicketToolOutput:
     """Execute typed create_ticket MCP tool by delegating to Phase 13-B TicketService."""
     from mcp_rag_agent.it_support.models import ITCategory, Priority
@@ -710,10 +980,35 @@ async def create_ticket_typed(
         get_current_tracer,
         get_request_id,
     )
+    from mcp_rag_agent.security import get_current_subject
 
     req_id = get_request_id() or "-"
     tracer = get_current_tracer()
+    active_subject = subject or get_current_subject()
     start_t = time.perf_counter()
+
+    if active_subject is not None:
+        auth = get_authorization_service().can_execute_tool(
+            active_subject,
+            "create_ticket",
+            {"requester_id": input_data.requester_id, "title": input_data.title},
+        )
+        if not auth.allowed:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="create_ticket",
+                request_id=req_id,
+                resource_type="ticket",
+                authorization_result="DENIED",
+                status="denied",
+                details={"reason": auth.reason_code, "message": auth.message},
+            )
+            return CreateTicketToolOutput(
+                status="error",
+                error_code=auth.reason_code,
+                error_message=auth.message,
+            )
 
     try:
         # Category validation
@@ -744,6 +1039,18 @@ async def create_ticket_typed(
         op_result = service.create_ticket(ticket_create)
         latency_ms = (time.perf_counter() - start_t) * 1000.0
 
+        if active_subject is not None:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="create_ticket",
+                request_id=req_id,
+                resource_type="ticket",
+                resource_id=op_result.ticket.ticket_id,
+                authorization_result="AUTHORIZED",
+                status="success" if op_result.created else "duplicate",
+            )
+
         if tracer:
             tracer.record_tool_call(
                 tool_name="create_ticket",
@@ -770,7 +1077,10 @@ async def create_ticket_typed(
 
     except Exception as e:
         safe_err = mask_sensitive(str(e))
-        logger.error(f"[TOOL:create_ticket] [req:{req_id}] Ticket creation error: {safe_err}", exc_info=True)
+        logger.error(
+            f"[TOOL:create_ticket] [req:{req_id}] Ticket creation error: {safe_err}",
+            exc_info=True,
+        )
         if tracer:
             tracer.record_error(
                 category=ErrorCategory.DATABASE_ERROR,
@@ -787,6 +1097,7 @@ async def create_ticket_typed(
 
 async def update_ticket_typed(
     input_data: UpdateTicketToolInput,
+    subject: Optional[Any] = None,
 ) -> UpdateTicketToolOutput:
     """Execute typed update_ticket MCP tool by delegating to Phase 13-B TicketService."""
     from mcp_rag_agent.it_support.tickets.models import (
@@ -800,15 +1111,67 @@ async def update_ticket_typed(
         get_current_tracer,
         get_request_id,
     )
+    from mcp_rag_agent.security import get_current_subject
 
     req_id = get_request_id() or "-"
     tracer = get_current_tracer()
+    active_subject = subject or get_current_subject()
     start_t = time.perf_counter()
+
+    if active_subject is not None:
+        auth = get_authorization_service().can_execute_tool(
+            active_subject, "update_ticket", {"ticket_id": input_data.ticket_id}
+        )
+        if not auth.allowed:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="update_ticket",
+                request_id=req_id,
+                resource_type="ticket",
+                resource_id=input_data.ticket_id,
+                authorization_result="DENIED",
+                status="denied",
+                details={"reason": auth.reason_code, "message": auth.message},
+            )
+            return UpdateTicketToolOutput(
+                status="error",
+                ticket_id=input_data.ticket_id,
+                error_code=auth.reason_code,
+                error_message=auth.message,
+            )
 
     try:
         service = get_ticket_service()
         ticket_id = input_data.ticket_id.strip()
         ticket_record = service.get_ticket(ticket_id)
+
+        # Resource-level access verification for tickets
+        if active_subject is not None:
+            res_auth = get_authorization_service().can_access_ticket(
+                active_subject, ticket_record, action="update"
+            )
+            if not res_auth.allowed:
+                get_audit_service().log_event(
+                    user_id=active_subject.user_id,
+                    role=active_subject.role,
+                    action="update_ticket",
+                    request_id=req_id,
+                    resource_type="ticket",
+                    resource_id=input_data.ticket_id,
+                    authorization_result="DENIED",
+                    status="denied",
+                    details={
+                        "reason": res_auth.reason_code,
+                        "message": res_auth.message,
+                    },
+                )
+                return UpdateTicketToolOutput(
+                    status="error",
+                    ticket_id=input_data.ticket_id,
+                    error_code=res_auth.reason_code,
+                    error_message=res_auth.message,
+                )
 
         # 1. Handle status transition if requested
         if input_data.status:
@@ -830,12 +1193,25 @@ async def update_ticket_typed(
         # 3. Handle comment addition if requested
         if input_data.comment:
             comment = TicketComment(
-                author_id=input_data.author_id or "system",
+                author_id=input_data.author_id
+                or (active_subject.user_id if active_subject else "system"),
                 body=input_data.comment.strip(),
             )
             ticket_record = service.add_comment(ticket_id, comment)
 
         latency_ms = (time.perf_counter() - start_t) * 1000.0
+
+        if active_subject is not None:
+            get_audit_service().log_event(
+                user_id=active_subject.user_id,
+                role=active_subject.role,
+                action="update_ticket",
+                request_id=req_id,
+                resource_type="ticket",
+                resource_id=ticket_record.ticket_id,
+                authorization_result="AUTHORIZED",
+                status="success",
+            )
 
         if tracer:
             tracer.record_tool_call(
@@ -878,7 +1254,9 @@ async def update_ticket_typed(
 
     except Exception as e:
         safe_err = mask_sensitive(str(e))
-        logger.error(f"[TOOL:update_ticket] [req:{req_id}] Error: {safe_err}", exc_info=True)
+        logger.error(
+            f"[TOOL:update_ticket] [req:{req_id}] Error: {safe_err}", exc_info=True
+        )
         if tracer:
             tracer.record_error(
                 category=ErrorCategory.DATABASE_ERROR,

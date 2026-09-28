@@ -25,8 +25,15 @@ class TicketLifecycleStatus(str, Enum):
 
 ALLOWED_TRANSITIONS: dict[TicketLifecycleStatus, set[TicketLifecycleStatus]] = {
     TicketLifecycleStatus.NEW: {TicketLifecycleStatus.OPEN},
-    TicketLifecycleStatus.OPEN: {TicketLifecycleStatus.IN_PROGRESS, TicketLifecycleStatus.ESCALATED},
-    TicketLifecycleStatus.IN_PROGRESS: {TicketLifecycleStatus.WAITING_FOR_USER, TicketLifecycleStatus.RESOLVED, TicketLifecycleStatus.ESCALATED},
+    TicketLifecycleStatus.OPEN: {
+        TicketLifecycleStatus.IN_PROGRESS,
+        TicketLifecycleStatus.ESCALATED,
+    },
+    TicketLifecycleStatus.IN_PROGRESS: {
+        TicketLifecycleStatus.WAITING_FOR_USER,
+        TicketLifecycleStatus.RESOLVED,
+        TicketLifecycleStatus.ESCALATED,
+    },
     TicketLifecycleStatus.WAITING_FOR_USER: {TicketLifecycleStatus.IN_PROGRESS},
     TicketLifecycleStatus.RESOLVED: {TicketLifecycleStatus.CLOSED},
     TicketLifecycleStatus.CLOSED: set(),
@@ -66,6 +73,7 @@ class TicketRecord(TicketCreate):
 
 class TicketPatch(BaseModel):
     """Only fields permitted by the ticket API; status uses a validated transition."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
     status: TicketLifecycleStatus | None = None
     assigned_team: str | None = Field(default=None, max_length=200)

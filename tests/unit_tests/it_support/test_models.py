@@ -6,9 +6,9 @@ from pydantic import ValidationError
 from mcp_rag_agent.it_support.models import (
     Device,
     Incident,
+    IncidentStatus,
     ITCategory,
     ITIssue,
-    IncidentStatus,
     Priority,
     SupportUser,
     Ticket,
@@ -17,34 +17,72 @@ from mcp_rag_agent.it_support.models import (
 
 
 def test_issue_accepts_typed_optional_context() -> None:
-    issue = ITIssue(title="VPN fails", description="VPN-ERR-742 on Windows", category=ITCategory.VPN, priority=Priority.HIGH, user_id="u-1", device_id="d-1", product="corporate VPN", platform="Windows", error_code="VPN-ERR-742")
+    issue = ITIssue(
+        title="VPN fails",
+        description="VPN-ERR-742 on Windows",
+        category=ITCategory.VPN,
+        priority=Priority.HIGH,
+        user_id="u-1",
+        device_id="d-1",
+        product="corporate VPN",
+        platform="Windows",
+        error_code="VPN-ERR-742",
+    )
     assert issue.status is TicketStatus.OPEN
     assert issue.error_code == "VPN-ERR-742"
 
 
-@pytest.mark.parametrize("payload", [{"title": "", "description": "test"}, {"title": "test", "description": ""}, {"title": "test", "description": "test", "category": "not-a-category"}])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"title": "", "description": "test"},
+        {"title": "test", "description": ""},
+        {"title": "test", "description": "test", "category": "not-a-category"},
+    ],
+)
 def test_issue_rejects_invalid_values(payload: dict[str, str]) -> None:
     with pytest.raises(ValidationError):
         ITIssue(**payload)
 
 
 def test_ticket_has_foundational_fields_and_typed_status() -> None:
-    ticket = Ticket(title="GitHub access", description="Need repository access", category=ITCategory.ACCESS, requester_id="u-1", assigned_team="identity", conversation_id="c-1")
+    ticket = Ticket(
+        title="GitHub access",
+        description="Need repository access",
+        category=ITCategory.ACCESS,
+        requester_id="u-1",
+        assigned_team="identity",
+        conversation_id="c-1",
+    )
     assert ticket.status is TicketStatus.OPEN
     assert ticket.ticket_id.startswith("TKT-")
 
 
 def test_incident_has_typed_status_and_severity() -> None:
-    incident = Incident(title="VPN outage", description="Remote workers cannot connect", service="corporate VPN", severity=Priority.CRITICAL, affected_users=42)
+    incident = Incident(
+        title="VPN outage",
+        description="Remote workers cannot connect",
+        service="corporate VPN",
+        severity=Priority.CRITICAL,
+        affected_users=42,
+    )
     assert incident.status is IncidentStatus.INVESTIGATING
     assert incident.affected_users == 42
 
 
 def test_incident_rejects_invalid_enum_and_negative_affected_users() -> None:
     with pytest.raises(ValidationError):
-        Incident(title="outage", description="details", service="VPN", severity="emergency")
+        Incident(
+            title="outage", description="details", service="VPN", severity="emergency"
+        )
     with pytest.raises(ValidationError):
-        Incident(title="outage", description="details", service="VPN", severity=Priority.HIGH, affected_users=-1)
+        Incident(
+            title="outage",
+            description="details",
+            service="VPN",
+            severity=Priority.HIGH,
+            affected_users=-1,
+        )
 
 
 def test_required_fields_are_enforced() -> None:

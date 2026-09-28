@@ -50,6 +50,8 @@ class DeviceService:
         """Upsert a device record (idempotent seeding)."""
         return self._store.upsert(device)
 
-    def list_devices(self, filters: Optional[dict[str, Any]] = None) -> list[DeviceRecord]:
+    def list_devices(
+        self, filters: Optional[dict[str, Any]] = None
+    ) -> list[DeviceRecord]:
         """List devices matching optional filter criteria."""
         return self._store.list(filters)

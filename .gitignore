@@ -51,3 +51,6 @@ htmlcov/
 coverage.xml
 .pytest_cache/
 .pytest-tmp*
+evaluation/results/eval_run_*
+!evaluation/results/eval_run_baseline.json
+!evaluation/results/eval_run_current.json
