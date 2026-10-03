@@ -1,6 +1,7 @@
 """Admin operations service aggregating ticket analytics, incidents, metrics, evaluation benchmarks, and sanitized audit trails."""
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -13,6 +14,8 @@ from mcp_rag_agent.it_support.models import IncidentStatus
 from mcp_rag_agent.it_support.tickets.models import TicketLifecycleStatus, TicketRecord
 from mcp_rag_agent.it_support.tickets.service import TicketService
 from mcp_rag_agent.security.audit import AuditEvent, AuditService
+
+logger = logging.getLogger("AdminAPIService")
 
 
 class OperationalKPIs(BaseModel):
@@ -266,8 +269,12 @@ class AdminAPIService:
                     },
                     raw_results_preview=results[:10],
                 )
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[AdminService] Failed to parse evaluation file '%s': %s",
+                    latest_file,
+                    exc,
+                )
 
         return AdminEvaluationSummary()
 

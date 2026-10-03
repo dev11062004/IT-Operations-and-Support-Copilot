@@ -180,8 +180,12 @@ class ConversationService:
                     tup = None
                 if tup is not None:
                     thread_exists = True
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[ConversationService] Checkpointer lookup failed for thread '%s': %s",
+                    thread_id,
+                    exc,
+                )
 
         if not thread_exists:
             raise KeyError(f"Conversation thread '{thread_id}' not found.")

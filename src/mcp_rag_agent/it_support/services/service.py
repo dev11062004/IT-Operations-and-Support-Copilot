@@ -1,5 +1,6 @@
 """Service status domain service for monitoring enterprise service health."""
 
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -15,6 +16,8 @@ from mcp_rag_agent.it_support.services.store import (
     ServiceNotFoundError,
     ServiceStatusStore,
 )
+
+logger = logging.getLogger("ServiceStatusService")
 
 # Canonical mapping for common variations
 SERVICE_ALIASES: dict[str, str] = {
@@ -122,8 +125,12 @@ class ServiceStatusChecker:
                             "message": f"Active incident ({incident.incident_id}): {incident.title}",
                         }
                     )
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[ServiceStatusService] Incident match lookup failed for service '%s': %s",
+                    canonical_name,
+                    exc,
+                )
 
         return record
 

@@ -22,7 +22,7 @@ class ITCategory(str, Enum):
     HARDWARE = "hardware"
     SOFTWARE = "software"
     ACCOUNT = "account"
-    PASSWORD = "password"
+    PASSWORD = "password"  # nosec B105
     MFA = "mfa"
     ACCESS = "access"
     SECURITY = "security"

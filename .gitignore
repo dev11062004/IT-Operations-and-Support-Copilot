@@ -54,3 +54,9 @@ coverage.xml
 evaluation/results/eval_run_*
 !evaluation/results/eval_run_baseline.json
 !evaluation/results/eval_run_current.json
+
+# Personal Profile & Portfolio (root-anchored)
+/PROFILE_README.md
+/assets/
+/profile/
+

@@ -66,8 +66,13 @@ class RunbookExecutor:
                 rb = self.registry.get(runbook_id, version=version)
                 step = rb.get_step(current_step_id)
                 expected = step.expected_outcome
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[RunbookExecutor] Could not retrieve expected outcome for step '%s' in runbook '%s': %s",
+                    current_step_id,
+                    runbook_id,
+                    exc,
+                )
 
         return StepExecutionResult(
             execution_id=state_dict.get(
