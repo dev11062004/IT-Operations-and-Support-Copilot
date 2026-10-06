@@ -1,10 +1,5 @@
 """Agent module for production MCP RAG Agent."""
 
-from mcp_rag_agent.agent.create_agent import (
-    create_mcp_rag_agent,
-    create_rag_agent_instance,
-    create_search_documents_tool,
-)
 from mcp_rag_agent.agent.models import (
     AgentExecutionMetadata,
     AgentResponse,
@@ -28,7 +23,16 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    """Provide lazy backwards compatibility for legacy 'agent' attribute."""
+    """Lazy import for create_agent symbols to break circular import cycle.
+
+    mcp_server.tools imports agent.models (fine), but agent.__init__ must not
+    eagerly import create_agent (which imports mcp_server.tools) at package
+    load time — that would form a circular dependency.
+    """
+    if name in ("create_rag_agent_instance", "create_mcp_rag_agent", "create_search_documents_tool"):
+        from mcp_rag_agent.agent import create_agent as _ca
+        return getattr(_ca, name)
+
     if name == "agent":
         import asyncio
         import warnings
@@ -54,3 +58,4 @@ def __getattr__(name: str):
                 ).result()
         return asyncio.run(create_rag_agent_instance())
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+

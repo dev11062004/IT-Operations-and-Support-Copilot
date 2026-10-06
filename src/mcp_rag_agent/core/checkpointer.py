@@ -10,7 +10,7 @@ from langgraph.checkpoint.mongodb import MongoDBSaver
 from pymongo import MongoClient
 
 from mcp_rag_agent.core.config import Config, config
-from mcp_rag_agent.mcp_server.tools import mask_sensitive
+from mcp_rag_agent.core.log_setup import mask_sensitive
 
 logger = logging.getLogger("Checkpointer")
 

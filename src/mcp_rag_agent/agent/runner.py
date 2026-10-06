@@ -21,7 +21,7 @@ from mcp_rag_agent.guardrails.models import (
     GuardrailViolation,
     ViolationType,
 )
-from mcp_rag_agent.mcp_server.tools import mask_sensitive
+from mcp_rag_agent.core.log_setup import mask_sensitive
 from mcp_rag_agent.observability import (
     ErrorCategory,
     ObservabilityTracer,
